@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.4
+
+- Cleaned up remaining install messages to use `pip install platformops-ai`.
+- Updated Docker packaging to use the default dependency set.
+
 ## 0.1.3
 
 - Moved Kubernetes and MCP dependencies into the default installation.

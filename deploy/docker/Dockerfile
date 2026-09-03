@@ -4,8 +4,7 @@ WORKDIR /app
 COPY pyproject.toml README.md /app/
 COPY src /app/src
 
-RUN pip install --no-cache-dir ".[mcp,kubernetes]"
+RUN pip install --no-cache-dir .
 
 ENV PLATFORMOPS_K8S_PROVIDER=fake
 CMD ["platformops-mcp-k8s"]
-

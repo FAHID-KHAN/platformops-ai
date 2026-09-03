@@ -25,7 +25,7 @@ class KubernetesApiProvider:
         except ImportError as exc:
             raise RuntimeError(
                 "KubernetesApiProvider requires the optional 'kubernetes' dependency. "
-                "Install with: pip install -e '.[kubernetes]'"
+                "Install with: pip install platformops-ai"
             ) from exc
 
         if self._client is None:

@@ -132,7 +132,7 @@ def create_server():
     except ImportError as exc:
         raise RuntimeError(
             "The MCP server requires the optional 'mcp' dependency. "
-            "Install with: pip install -e '.[mcp]'"
+            "Install with: pip install platformops-ai"
         ) from exc
 
     mcp = FastMCP("platformops-kubernetes")
