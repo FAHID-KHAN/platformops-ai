@@ -56,4 +56,3 @@ Required capabilities:
 - Narrow write tools.
 - Execution audit trail.
 - Post-remediation verification.
-

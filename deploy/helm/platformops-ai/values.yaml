@@ -1,6 +1,6 @@
 image:
   repository: platformops-ai
-  tag: "0.1.0"
+  tag: "0.1.1"
   pullPolicy: IfNotPresent
 
 provider: api
@@ -11,4 +11,3 @@ rbac:
   clusterWide: false
 
 resources: {}
-

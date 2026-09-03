@@ -20,6 +20,32 @@ pip install -e ".[mcp]"
 PLATFORMOPS_K8S_PROVIDER=fake platformops-mcp-k8s
 ```
 
+Use the direct CLI against a real Kubernetes context:
+
+```bash
+pip install -e ".[kubernetes]"
+platformops k8s nodes
+platformops k8s namespaces --allowed-namespaces default,kube-system
+platformops k8s pods --namespace kube-system --allowed-namespaces default,kube-system
+```
+
+Use JSON output when you want the full evidence envelope:
+
+```bash
+platformops --output json k8s pods --namespace kube-system --allowed-namespaces kube-system
+```
+
+Run a more useful namespace investigation:
+
+```bash
+platformops k8s investigate \
+  --namespace jenkins \
+  --allowed-namespaces jenkins \
+  --tail-lines 80
+```
+
+This collects pod status, namespace events, and bounded log excerpts for unhealthy pods.
+
 For real Kubernetes API access, install the optional Kubernetes dependency and configure kubeconfig or in-cluster credentials:
 
 ```bash
@@ -34,6 +60,10 @@ platformops-mcp-k8s
 - `get_nodes()`
 - `list_namespaces()`
 - `list_pods(namespace=None)`
+- `get_pod(namespace, name)`
+- `list_events(namespace, pod_name=None)`
+- `get_pod_logs(namespace, name, container=None, tail_lines=100)`
+- `investigate_namespace(namespace, tail_lines=50)`
 
 All tools return structured evidence envelopes. The MCP server does not require an LLM API key.
 

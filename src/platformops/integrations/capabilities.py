@@ -1,4 +1,7 @@
 K8S_GET_NODES = "kubernetes.get_nodes"
 K8S_LIST_NAMESPACES = "kubernetes.list_namespaces"
 K8S_LIST_PODS = "kubernetes.list_pods"
-
+K8S_GET_POD = "kubernetes.get_pod"
+K8S_LIST_EVENTS = "kubernetes.list_events"
+K8S_GET_POD_LOGS = "kubernetes.get_pod_logs"
+K8S_INVESTIGATE_NAMESPACE = "kubernetes.investigate_namespace"

@@ -4,7 +4,15 @@ import json
 from pathlib import Path
 from typing import Any
 
-from platformops.providers.kubernetes.models import NamespaceSummary, NodeSummary, PodSummary
+from platformops.providers.kubernetes.models import (
+    ContainerSummary,
+    EventSummary,
+    NamespaceSummary,
+    NodeSummary,
+    PodDetail,
+    PodLogExcerpt,
+    PodSummary,
+)
 
 
 class FixtureKubernetesProvider:
@@ -26,3 +34,52 @@ class FixtureKubernetesProvider:
             return pods
         return [pod for pod in pods if pod.namespace == namespace]
 
+    async def get_pod(self, namespace: str, name: str) -> PodDetail:
+        for pod in self._data().get("pod_details", []):
+            if pod["namespace"] == namespace and pod["name"] == name:
+                containers = tuple(ContainerSummary(**item) for item in pod.get("containers", []))
+                return PodDetail(
+                    name=pod["name"],
+                    namespace=pod["namespace"],
+                    phase=pod["phase"],
+                    ready=pod["ready"],
+                    restarts=pod["restarts"],
+                    node_name=pod.get("node_name"),
+                    service_account=pod.get("service_account"),
+                    containers=containers,
+                    conditions=pod.get("conditions", {}),
+                )
+        raise KeyError(f"pod not found: {namespace}/{name}")
+
+    async def list_events(self, namespace: str, pod_name: str | None = None) -> list[EventSummary]:
+        events = [
+            EventSummary(**event)
+            for event in self._data().get("events", [])
+            if event["namespace"] == namespace
+        ]
+        if pod_name is None:
+            return events
+        return [event for event in events if event.involved_object_name == pod_name]
+
+    async def get_pod_logs(
+        self,
+        namespace: str,
+        name: str,
+        container: str | None = None,
+        tail_lines: int = 100,
+    ) -> PodLogExcerpt:
+        key = f"{namespace}/{name}"
+        logs = self._data().get("logs", {}).get(key)
+        if logs is None:
+            await self.get_pod(namespace, name)
+            logs = ""
+        lines = logs.splitlines()
+        excerpt = "\n".join(lines[-tail_lines:])
+        return PodLogExcerpt(
+            namespace=namespace,
+            pod_name=name,
+            container=container,
+            tail_lines=tail_lines,
+            text=excerpt,
+            truncated=len(lines) > tail_lines,
+        )

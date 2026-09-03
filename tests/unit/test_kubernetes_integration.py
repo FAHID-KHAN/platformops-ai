@@ -1,4 +1,10 @@
-from platformops.integrations.capabilities import K8S_GET_NODES, K8S_LIST_NAMESPACES, K8S_LIST_PODS
+from platformops.integrations.capabilities import (
+    K8S_GET_NODES,
+    K8S_GET_POD_LOGS,
+    K8S_INVESTIGATE_NAMESPACE,
+    K8S_LIST_NAMESPACES,
+    K8S_LIST_PODS,
+)
 from platformops.domain import InvocationContext
 from platformops.policies import KubernetesReadOnlyPolicy
 from platformops.providers.kubernetes import FakeKubernetesProvider, KubernetesIntegration
@@ -58,3 +64,32 @@ async def test_list_pods_without_namespace_filters_to_allowlist():
     assert len(pods) == 1
     assert pods[0]["namespace"] == "platformops-demo"
 
+
+async def test_get_pod_logs_bounds_tail_lines():
+    integration = KubernetesIntegration(FakeKubernetesProvider())
+
+    envelope = await integration.invoke(
+        K8S_GET_POD_LOGS,
+        {
+            "namespace": "platformops-demo",
+            "name": "checkout-api-7df45b9b9c-2kq4h",
+            "tail_lines": 999,
+        },
+        InvocationContext(),
+    )
+
+    assert envelope.to_dict()["payload"]["logs"]["tail_lines"] == 500
+
+
+async def test_investigate_namespace_returns_summary():
+    integration = KubernetesIntegration(FakeKubernetesProvider())
+
+    envelope = await integration.invoke(
+        K8S_INVESTIGATE_NAMESPACE,
+        {"namespace": "platformops-demo"},
+        InvocationContext(),
+    )
+    data = envelope.to_dict()
+
+    assert data["evidence_type"] == "kubernetes-investigation"
+    assert "summary" in data["payload"]

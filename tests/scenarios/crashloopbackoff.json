@@ -22,6 +22,45 @@
       "restarts": 7,
       "node_name": "fixture-control-plane"
     }
-  ]
+  ],
+  "pod_details": [
+    {
+      "name": "checkout-api-7df45b9b9c-crash",
+      "namespace": "platformops-demo",
+      "phase": "Running",
+      "ready": "0/1",
+      "restarts": 7,
+      "node_name": "fixture-control-plane",
+      "service_account": "default",
+      "containers": [
+        {
+          "name": "checkout-api",
+          "ready": false,
+          "restart_count": 7,
+          "state": "waiting",
+          "reason": "CrashLoopBackOff"
+        }
+      ],
+      "conditions": {
+        "Ready": "False",
+        "PodScheduled": "True"
+      }
+    }
+  ],
+  "events": [
+    {
+      "namespace": "platformops-demo",
+      "involved_object_name": "checkout-api-7df45b9b9c-crash",
+      "involved_object_kind": "Pod",
+      "type": "Warning",
+      "reason": "BackOff",
+      "message": "Back-off restarting failed container checkout-api",
+      "count": 7,
+      "first_timestamp": null,
+      "last_timestamp": null
+    }
+  ],
+  "logs": {
+    "platformops-demo/checkout-api-7df45b9b9c-crash": "starting checkout-api\nDATABASE_URL is missing\nexiting with code 1"
+  }
 }
-

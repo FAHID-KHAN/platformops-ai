@@ -22,6 +22,45 @@
       "restarts": 0,
       "node_name": "fixture-control-plane"
     }
-  ]
+  ],
+  "pod_details": [
+    {
+      "name": "checkout-api-7df45b9b9c-2kq4h",
+      "namespace": "platformops-demo",
+      "phase": "Running",
+      "ready": "1/1",
+      "restarts": 0,
+      "node_name": "fixture-control-plane",
+      "service_account": "default",
+      "containers": [
+        {
+          "name": "checkout-api",
+          "ready": true,
+          "restart_count": 0,
+          "state": "running",
+          "reason": null
+        }
+      ],
+      "conditions": {
+        "Ready": "True",
+        "PodScheduled": "True"
+      }
+    }
+  ],
+  "events": [
+    {
+      "namespace": "platformops-demo",
+      "involved_object_name": "checkout-api-7df45b9b9c-2kq4h",
+      "involved_object_kind": "Pod",
+      "type": "Normal",
+      "reason": "Started",
+      "message": "Started container checkout-api",
+      "count": 1,
+      "first_timestamp": null,
+      "last_timestamp": null
+    }
+  ],
+  "logs": {
+    "platformops-demo/checkout-api-7df45b9b9c-2kq4h": "checkout-api started\nhealth ok"
+  }
 }
-

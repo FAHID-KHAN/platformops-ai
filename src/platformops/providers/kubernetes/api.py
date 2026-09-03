@@ -2,7 +2,15 @@ from __future__ import annotations
 
 import asyncio
 
-from platformops.providers.kubernetes.models import NamespaceSummary, NodeSummary, PodSummary
+from platformops.providers.kubernetes.models import (
+    ContainerSummary,
+    EventSummary,
+    NamespaceSummary,
+    NodeSummary,
+    PodDetail,
+    PodLogExcerpt,
+    PodSummary,
+)
 
 
 class KubernetesApiProvider:
@@ -69,6 +77,69 @@ class KubernetesApiProvider:
             response = await asyncio.to_thread(api.list_namespaced_pod, namespace)
         return [self._pod_summary(item) for item in response.items]
 
+    async def get_pod(self, namespace: str, name: str) -> PodDetail:
+        api = self._core_v1()
+        item = await asyncio.to_thread(api.read_namespaced_pod, name=name, namespace=namespace)
+        summary = self._pod_summary(item)
+        return PodDetail(
+            name=summary.name,
+            namespace=summary.namespace,
+            phase=summary.phase,
+            ready=summary.ready,
+            restarts=summary.restarts,
+            node_name=summary.node_name,
+            service_account=item.spec.service_account_name,
+            containers=tuple(self._container_summary(status) for status in item.status.container_statuses or []),
+            conditions={condition.type: condition.status for condition in item.status.conditions or []},
+        )
+
+    async def list_events(self, namespace: str, pod_name: str | None = None) -> list[EventSummary]:
+        api = self._core_v1()
+        field_selector = f"involvedObject.name={pod_name}" if pod_name else None
+        response = await asyncio.to_thread(
+            api.list_namespaced_event,
+            namespace=namespace,
+            field_selector=field_selector,
+        )
+        return [
+            EventSummary(
+                namespace=item.metadata.namespace,
+                involved_object_name=item.involved_object.name,
+                involved_object_kind=item.involved_object.kind,
+                type=item.type or "",
+                reason=item.reason or "",
+                message=item.message or "",
+                count=item.count or 1,
+                first_timestamp=item.first_timestamp.isoformat() if item.first_timestamp else None,
+                last_timestamp=item.last_timestamp.isoformat() if item.last_timestamp else None,
+            )
+            for item in response.items
+        ]
+
+    async def get_pod_logs(
+        self,
+        namespace: str,
+        name: str,
+        container: str | None = None,
+        tail_lines: int = 100,
+    ) -> PodLogExcerpt:
+        api = self._core_v1()
+        text = await asyncio.to_thread(
+            api.read_namespaced_pod_log,
+            name=name,
+            namespace=namespace,
+            container=container,
+            tail_lines=tail_lines,
+        )
+        return PodLogExcerpt(
+            namespace=namespace,
+            pod_name=name,
+            container=container,
+            tail_lines=tail_lines,
+            text=text,
+            truncated=False,
+        )
+
     def _pod_summary(self, item) -> PodSummary:
         container_statuses = item.status.container_statuses or []
         ready_count = sum(1 for status in container_statuses if status.ready)
@@ -82,3 +153,21 @@ class KubernetesApiProvider:
             node_name=item.spec.node_name,
         )
 
+    def _container_summary(self, status) -> ContainerSummary:
+        state = "unknown"
+        reason = None
+        if status.state.waiting:
+            state = "waiting"
+            reason = status.state.waiting.reason
+        elif status.state.running:
+            state = "running"
+        elif status.state.terminated:
+            state = "terminated"
+            reason = status.state.terminated.reason
+        return ContainerSummary(
+            name=status.name,
+            ready=status.ready,
+            restart_count=status.restart_count,
+            state=state,
+            reason=reason,
+        )
