@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.3
+
+- Moved Kubernetes and MCP dependencies into the default installation.
+- Simplified install instructions to `pip install platformops-ai`.
+- Kept empty `kubernetes` and `mcp` extras as compatibility aliases.
+
 ## 0.1.2
 
 - Fixed CLI placement for `--allowed-namespaces` after Kubernetes subcommands.

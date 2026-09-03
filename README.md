@@ -9,7 +9,7 @@ Kubernetes is the first reference integration, not the product boundary. The arc
 Install the latest release from PyPI:
 
 ```bash
-pip install "platformops-ai[kubernetes]"
+pip install platformops-ai
 ```
 
 Then run:
@@ -17,12 +17,6 @@ Then run:
 ```bash
 platformops k8s nodes
 platformops k8s investigate --namespace jenkins --allowed-namespaces jenkins
-```
-
-For MCP support:
-
-```bash
-pip install "platformops-ai[mcp,kubernetes]"
 ```
 
 ## Local Development
@@ -37,14 +31,12 @@ pytest
 Run the Kubernetes MCP server with deterministic fake data:
 
 ```bash
-pip install -e ".[mcp]"
 PLATFORMOPS_K8S_PROVIDER=fake platformops-mcp-k8s
 ```
 
 Use the direct CLI against a real Kubernetes context:
 
 ```bash
-pip install -e ".[kubernetes]"
 platformops k8s nodes
 platformops k8s namespaces --allowed-namespaces default,kube-system
 platformops k8s pods --namespace kube-system --allowed-namespaces default,kube-system
@@ -67,10 +59,9 @@ platformops k8s investigate \
 
 This collects pod status, namespace events, and bounded log excerpts for unhealthy pods.
 
-For real Kubernetes API access, install the optional Kubernetes dependency and configure kubeconfig or in-cluster credentials:
+For real Kubernetes API access, configure kubeconfig or in-cluster credentials:
 
 ```bash
-pip install -e ".[mcp,kubernetes]"
 PLATFORMOPS_K8S_PROVIDER=api \
 PLATFORMOPS_K8S_ALLOWED_NAMESPACES=default \
 platformops-mcp-k8s
