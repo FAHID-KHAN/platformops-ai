@@ -2,6 +2,8 @@
 
 PlatformOps AI is a model-agnostic operations platform. MCP servers expose governed tools and structured evidence; an MCP host and the user's selected model decide when to call those tools.
 
+For the implementation that exists today, see the [current setup diagram](current-setup.md).
+
 ## First Release
 
 `v0.1.0 - Kubernetes Investigator` proves the architecture with a read-only Kubernetes integration.
@@ -39,4 +41,3 @@ The MCP server does not require an LLM key. Kubernetes credentials stay with the
 - `kubernetes.list_pods`
 
 Each capability returns an evidence envelope with source, capability, collection time, scope, schema version, redaction status, payload, and errors.
-

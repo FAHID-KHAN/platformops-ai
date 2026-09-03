@@ -11,7 +11,7 @@
 ![MCP](https://img.shields.io/badge/MCP-tools-6f42c1)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
 
-[Quick Start](#quick-start) . [CLI](#cli-reference) . [MCP](#mcp-server) . [Diagnosis](#what-it-can-diagnose) . [Runbooks](docs/README.md) . [Architecture](docs/architecture/overview.md) . [Roadmap](docs/roadmap.md) . [Contributing](CONTRIBUTING.md) . [Security](SECURITY.md)
+[Quick Start](#quick-start) . [CLI](#cli-reference) . [MCP](#mcp-server) . [Diagnosis](#what-it-can-diagnose) . [Architecture](docs/architecture/current-setup.md) . [Runbooks](docs/README.md) . [Roadmap](docs/roadmap.md) . [Contributing](CONTRIBUTING.md) . [Security](SECURITY.md)
 
 <table>
   <tr>
@@ -31,6 +31,8 @@ PlatformOps AI helps operators investigate Kubernetes workloads without giving a
 The current release focuses on read-only Kubernetes and Prometheus investigation. The architecture is designed to grow into CI/CD, GitOps, source control, controlled orchestration, and approval-gated remediation.
 
 Jenkins appears in examples because it is a familiar platform workload, but PlatformOps AI is not Jenkins-specific. It can inspect any Kubernetes namespace or service that your kubeconfig can read and that you include in the namespace allowlist.
+
+For the current system design, see the [architecture diagram](docs/architecture/current-setup.md).
 
 ## Install
 
@@ -402,6 +404,7 @@ Roadmap:
 ## Documentation
 
 - [Documentation index](docs/README.md)
+- [Current setup diagram](docs/architecture/current-setup.md)
 - [Architecture overview](docs/architecture/overview.md)
 - [Kubernetes diagnosis runbook](docs/runbooks/kubernetes-diagnosis.md)
 - [Prometheus correlation runbook](docs/runbooks/prometheus-correlation.md)

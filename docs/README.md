@@ -4,6 +4,7 @@ This folder contains the product documentation for PlatformOps AI.
 
 ## Start Here
 
+- [Current setup diagram](architecture/current-setup.md)
 - [Architecture overview](architecture/overview.md)
 - [Roadmap](roadmap.md)
 - [Architecture decisions](adr/README.md)
