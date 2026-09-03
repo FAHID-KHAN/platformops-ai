@@ -73,7 +73,7 @@ platformops --output markdown diagnose service jenkins --namespace jenkins --all
 
 ## What It Can Diagnose
 
-`v0.3.0` includes deterministic Kubernetes and Prometheus correlation rules for:
+`v0.4.0` includes deterministic Kubernetes, service-path, and Prometheus correlation rules for:
 
 - CrashLoopBackOff-style restarts
 - ImagePullBackOff and image pull failures
@@ -84,6 +84,8 @@ platformops --output markdown diagnose service jenkins --namespace jenkins --all
 - policy and provider errors
 - Prometheus target-down correlation
 - Prometheus firing-alert correlation
+- Services with missing ready endpoints
+- Ingress routes attached to a service
 
 Example output:
 
@@ -193,6 +195,9 @@ Available MCP tools:
 - `investigate_namespace(namespace, tail_lines=50)`
 - `diagnose_namespace(namespace, tail_lines=80)`
 - `diagnose_service_path(name, namespace, tail_lines=80)`
+- `prometheus_query(query)`
+- `prometheus_targets()`
+- `prometheus_alerts()`
 
 The MCP server does not require an LLM API key. It exposes tools and evidence to an MCP-capable host; the host owns model selection.
 
@@ -266,7 +271,7 @@ Current release: `v0.4.0 - Service Path Diagnosis`
 Roadmap:
 
 - `v0.5.0`: Jenkins and ArgoCD read-only delivery investigation
-- `v0.5.0`: orchestrated investigation experiments
+- `v0.6.0`: orchestrated investigation experiments
 - `v1.0.0`: approval-gated remediation
 
 ## Documentation
@@ -275,6 +280,7 @@ Roadmap:
 - [Architecture overview](docs/architecture/overview.md)
 - [Kubernetes diagnosis runbook](docs/runbooks/kubernetes-diagnosis.md)
 - [Prometheus correlation runbook](docs/runbooks/prometheus-correlation.md)
+- [Service path diagnosis runbook](docs/runbooks/service-diagnosis.md)
 - [Roadmap](docs/roadmap.md)
 - [ADR index](docs/adr/README.md)
 - [Security policy](SECURITY.md)
