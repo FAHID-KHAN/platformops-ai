@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.4.0
+
+- Added Kubernetes Service, Endpoints, and Ingress evidence.
+- Added previous pod log support.
+- Added service-path diagnosis with `platformops diagnose service`.
+- Added markdown diagnosis output for incident reports.
+- Added service-path MCP helpers and tools.
+- Added fixtures and tests for ready endpoints and missing endpoint failures.
+
 ## 0.3.0
 
 - Added read-only Prometheus provider support.

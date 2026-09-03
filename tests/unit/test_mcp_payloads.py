@@ -1,7 +1,10 @@
 from platformops.mcp.kubernetes_server import (
     diagnose_namespace_payload,
+    diagnose_service_payload,
+    get_endpoints_payload,
     get_nodes_payload,
     list_pods_payload,
+    list_services_payload,
 )
 from platformops.mcp.prometheus_server import prometheus_alerts_payload, prometheus_targets_payload
 from platformops.policies import KubernetesReadOnlyPolicy
@@ -44,3 +47,23 @@ async def test_mcp_prometheus_payload_helpers_return_evidence():
     assert targets["source"] == "prometheus"
     assert "targets" in targets["payload"]
     assert alerts["source"] == "prometheus"
+
+
+async def test_mcp_service_payload_helpers_return_evidence():
+    integration = KubernetesIntegration(FakeKubernetesProvider())
+
+    services = await list_services_payload(namespace="platformops-demo", integration=integration)
+    endpoints = await get_endpoints_payload(
+        namespace="platformops-demo",
+        service_name="checkout-api",
+        integration=integration,
+    )
+    diagnosis = await diagnose_service_payload(
+        name="checkout-api",
+        namespace="platformops-demo",
+        integration=integration,
+    )
+
+    assert services["payload"]["services"][0]["name"] == "checkout-api"
+    assert endpoints["payload"]["endpoints"]["addresses"][0]["ready"] is True
+    assert diagnosis["findings"]

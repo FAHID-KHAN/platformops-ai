@@ -11,12 +11,15 @@ from platformops.domain import (
 from platformops.integrations.capabilities import (
     K8S_GET_NODES,
     K8S_DIAGNOSE_NAMESPACE,
+    K8S_GET_ENDPOINTS,
     K8S_GET_POD,
     K8S_GET_POD_LOGS,
     K8S_INVESTIGATE_NAMESPACE,
+    K8S_LIST_INGRESSES,
     K8S_LIST_EVENTS,
     K8S_LIST_NAMESPACES,
     K8S_LIST_PODS,
+    K8S_LIST_SERVICES,
 )
 from platformops.policies import KubernetesReadOnlyPolicy, PolicyViolation
 from platformops.providers.kubernetes.provider import KubernetesProvider
@@ -45,6 +48,9 @@ class KubernetesIntegration:
                 K8S_GET_POD_LOGS,
                 K8S_INVESTIGATE_NAMESPACE,
                 K8S_DIAGNOSE_NAMESPACE,
+                K8S_LIST_SERVICES,
+                K8S_GET_ENDPOINTS,
+                K8S_LIST_INGRESSES,
             ),
             risk_level=RiskLevel.READ_ONLY,
             evidence_types=(
@@ -54,6 +60,9 @@ class KubernetesIntegration:
                 "kubernetes-event",
                 "kubernetes-log-excerpt",
                 "kubernetes-investigation",
+                "kubernetes-service",
+                "kubernetes-endpoint",
+                "kubernetes-ingress",
             ),
             authentication="kubeconfig-or-service-account",
         )
@@ -142,6 +151,7 @@ class KubernetesIntegration:
                 namespace = arguments["namespace"]
                 name = arguments["name"]
                 container = arguments.get("container")
+                previous = bool(arguments.get("previous", False))
                 tail_lines = min(max(int(arguments.get("tail_lines", 100)), 1), 500)
                 self.policy.ensure_namespace_allowed(namespace)
                 logs = await self.provider.get_pod_logs(
@@ -149,13 +159,59 @@ class KubernetesIntegration:
                     name=name,
                     container=container,
                     tail_lines=tail_lines,
+                    previous=previous,
                 )
                 return EvidenceEnvelope(
                     source="kubernetes",
                     capability=capability,
                     evidence_type="kubernetes-log-excerpt",
                     payload={"logs": logs.to_dict()},
-                    scope={"namespace": namespace, "pod": name, "container": container},
+                    scope={
+                        "namespace": namespace,
+                        "pod": name,
+                        "container": container,
+                        "previous": previous,
+                    },
+                )
+
+            if capability == K8S_LIST_SERVICES:
+                namespace = arguments["namespace"]
+                self.policy.ensure_namespace_allowed(namespace)
+                services = await self.provider.list_services(namespace=namespace)
+                return EvidenceEnvelope(
+                    source="kubernetes",
+                    capability=capability,
+                    evidence_type="kubernetes-service",
+                    payload={"services": [service.to_dict() for service in services]},
+                    scope={"namespace": namespace},
+                )
+
+            if capability == K8S_GET_ENDPOINTS:
+                namespace = arguments["namespace"]
+                service_name = arguments["service_name"]
+                self.policy.ensure_namespace_allowed(namespace)
+                endpoints = await self.provider.get_endpoints(
+                    namespace=namespace,
+                    service_name=service_name,
+                )
+                return EvidenceEnvelope(
+                    source="kubernetes",
+                    capability=capability,
+                    evidence_type="kubernetes-endpoint",
+                    payload={"endpoints": endpoints.to_dict()},
+                    scope={"namespace": namespace, "service": service_name},
+                )
+
+            if capability == K8S_LIST_INGRESSES:
+                namespace = arguments["namespace"]
+                self.policy.ensure_namespace_allowed(namespace)
+                ingresses = await self.provider.list_ingresses(namespace=namespace)
+                return EvidenceEnvelope(
+                    source="kubernetes",
+                    capability=capability,
+                    evidence_type="kubernetes-ingress",
+                    payload={"ingresses": [ingress.to_dict() for ingress in ingresses]},
+                    scope={"namespace": namespace},
                 )
 
             if capability == K8S_INVESTIGATE_NAMESPACE:

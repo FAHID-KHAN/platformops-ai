@@ -9,6 +9,7 @@ This folder contains the product documentation for PlatformOps AI.
 - [Architecture decisions](adr/README.md)
 - [Kubernetes diagnosis](runbooks/kubernetes-diagnosis.md)
 - [Prometheus correlation](runbooks/prometheus-correlation.md)
+- [Service path diagnosis](runbooks/service-diagnosis.md)
 
 ## Source Planning Documents
 

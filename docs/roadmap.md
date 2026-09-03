@@ -40,19 +40,26 @@ Required capabilities:
 - Kubernetes and metrics correlation.
 - Prometheus target and alert correlation in Kubernetes diagnosis.
 
-## v0.4.0 - Delivery Investigator
+## v0.4.0 - Service Path Diagnosis
+
+- Kubernetes Service, Endpoints, and Ingress evidence.
+- Service-level diagnosis.
+- Previous container logs.
+- Markdown incident report output.
+
+## v0.5.0 - Delivery Investigator
 
 - Jenkins and ArgoCD read-only providers.
 - Correlate deployments, revisions, pipeline failures, and Kubernetes symptoms.
 
-## v0.4.x - Integration SDK Preview
+## v0.5.x - Integration SDK Preview
 
 - Integration manifests.
 - Vendor-neutral capability vocabulary.
 - Contract-test suite.
 - Example community-style integration.
 
-## v0.5.0 - Orchestrated Investigation
+## v0.6.0 - Orchestrated Investigation
 
 - Supervisor and specialist-agent experiments.
 - Checkpoints, handoffs, retries, and bounded context.

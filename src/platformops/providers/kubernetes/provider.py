@@ -3,12 +3,15 @@ from __future__ import annotations
 from typing import Protocol
 
 from platformops.providers.kubernetes.models import (
+    EndpointSummary,
     EventSummary,
+    IngressSummary,
     NamespaceSummary,
     NodeSummary,
     PodDetail,
     PodLogExcerpt,
     PodSummary,
+    ServiceSummary,
 )
 
 
@@ -29,4 +32,11 @@ class KubernetesProvider(Protocol):
         name: str,
         container: str | None = None,
         tail_lines: int = 100,
+        previous: bool = False,
     ) -> PodLogExcerpt: ...
+
+    async def list_services(self, namespace: str) -> list[ServiceSummary]: ...
+
+    async def get_endpoints(self, namespace: str, service_name: str) -> EndpointSummary: ...
+
+    async def list_ingresses(self, namespace: str) -> list[IngressSummary]: ...

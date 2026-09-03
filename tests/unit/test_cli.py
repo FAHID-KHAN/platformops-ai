@@ -148,3 +148,29 @@ def test_cli_diagnosis_can_use_prometheus_fixture(capsys):
 
     assert exit_code == 0
     assert "Prometheus target is down" in output
+
+
+def test_cli_diagnoses_service_markdown(capsys):
+    exit_code = main(
+        [
+            "--output",
+            "markdown",
+            "diagnose",
+            "service",
+            "checkout-api",
+            "--provider",
+            "fixture",
+            "--fixture",
+            "tests/scenarios/service_no_endpoints.json",
+            "--namespace",
+            "platformops-demo",
+            "--allowed-namespaces",
+            "platformops-demo",
+        ]
+    )
+
+    output = capsys.readouterr().out
+
+    assert exit_code == 0
+    assert "# Diagnosis: critical" in output
+    assert "has no ready endpoints" in output

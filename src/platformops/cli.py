@@ -8,13 +8,16 @@ from typing import Any, Sequence
 
 from platformops.mcp.kubernetes_server import (
     diagnose_namespace_payload,
+    get_endpoints_payload,
     get_pod_logs_payload,
     get_pod_payload,
     get_nodes_payload,
     investigate_namespace_payload,
+    list_ingresses_payload,
     list_events_payload,
     list_namespaces_payload,
     list_pods_payload,
+    list_services_payload,
 )
 from platformops.mcp.prometheus_server import (
     build_prometheus_integration,
@@ -29,6 +32,7 @@ from platformops.providers.kubernetes import (
     KubernetesApiProvider,
     KubernetesIntegration,
 )
+from platformops.diagnostics.service import diagnose_service
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -36,7 +40,7 @@ def build_parser() -> argparse.ArgumentParser:
         prog="platformops",
         description="Read-only PlatformOps AI investigation tools.",
     )
-    parser.add_argument("--output", choices=("table", "json"), default="table")
+    parser.add_argument("--output", choices=("table", "json", "markdown"), default="table")
 
     subcommands = parser.add_subparsers(dest="area", required=True)
     diagnose = subcommands.add_parser("diagnose", help="Produce deterministic diagnosis reports")
@@ -47,6 +51,13 @@ def build_parser() -> argparse.ArgumentParser:
     diagnose_k8s.add_argument("--tail-lines", type=int, default=80)
     _add_prometheus_args(diagnose_k8s)
     _add_policy_args(diagnose_k8s)
+    diagnose_service_parser = diagnose_areas.add_parser("service", help="Diagnose a Kubernetes service path")
+    diagnose_service_parser.add_argument("name")
+    _add_k8s_connection_args(diagnose_service_parser)
+    diagnose_service_parser.add_argument("--namespace", "-n", required=True)
+    diagnose_service_parser.add_argument("--tail-lines", type=int, default=80)
+    _add_prometheus_args(diagnose_service_parser)
+    _add_policy_args(diagnose_service_parser)
 
     prometheus = subcommands.add_parser("prometheus", help="Read-only Prometheus commands")
     _add_prometheus_args(prometheus)
@@ -81,7 +92,18 @@ def build_parser() -> argparse.ArgumentParser:
     logs.add_argument("--namespace", "-n", required=True)
     logs.add_argument("--container", "-c", default=None)
     logs.add_argument("--tail-lines", type=int, default=100)
+    logs.add_argument("--previous", action="store_true")
     _add_policy_args(logs)
+    services = k8s_commands.add_parser("services", help="List Kubernetes services")
+    services.add_argument("--namespace", "-n", required=True)
+    _add_policy_args(services)
+    endpoints = k8s_commands.add_parser("endpoints", help="Show Kubernetes endpoints for a service")
+    endpoints.add_argument("service_name")
+    endpoints.add_argument("--namespace", "-n", required=True)
+    _add_policy_args(endpoints)
+    ingresses = k8s_commands.add_parser("ingresses", help="List Kubernetes ingresses")
+    ingresses.add_argument("--namespace", "-n", required=True)
+    _add_policy_args(ingresses)
     investigate = k8s_commands.add_parser("investigate", help="Investigate a namespace")
     investigate.add_argument("--namespace", "-n", required=True)
     investigate.add_argument("--tail-lines", type=int, default=50)
@@ -117,18 +139,27 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 async def _run(args: argparse.Namespace) -> dict[str, Any]:
     if args.area == "diagnose":
-        if args.diagnose_area != "k8s":
-            raise ValueError(f"unsupported diagnosis area: {args.diagnose_area}")
         integration = _build_kubernetes_integration(args)
         prometheus = _build_prometheus_integration(args)
-        return {
-            "diagnosis": await diagnose_namespace_payload(
+        if args.diagnose_area == "k8s":
+            return {
+                "diagnosis": await diagnose_namespace_payload(
+                    namespace=args.namespace,
+                    tail_lines=args.tail_lines,
+                    integration=integration,
+                    prometheus=prometheus,
+                )
+            }
+        if args.diagnose_area == "service":
+            report = await diagnose_service(
+                name=args.name,
                 namespace=args.namespace,
                 tail_lines=args.tail_lines,
                 integration=integration,
                 prometheus=prometheus,
             )
-        }
+            return {"diagnosis": report.to_dict(), "markdown": report.to_markdown()}
+        raise ValueError(f"unsupported diagnosis area: {args.diagnose_area}")
 
     if args.area == "prometheus":
         integration = _build_prometheus_integration(args)
@@ -166,8 +197,19 @@ async def _run(args: argparse.Namespace) -> dict[str, Any]:
             name=args.name,
             container=args.container,
             tail_lines=args.tail_lines,
+            previous=args.previous,
             integration=integration,
         )
+    if args.command == "services":
+        return await list_services_payload(namespace=args.namespace, integration=integration)
+    if args.command == "endpoints":
+        return await get_endpoints_payload(
+            namespace=args.namespace,
+            service_name=args.service_name,
+            integration=integration,
+        )
+    if args.command == "ingresses":
+        return await list_ingresses_payload(namespace=args.namespace, integration=integration)
     if args.command == "investigate":
         return await investigate_namespace_payload(
             namespace=args.namespace,
@@ -204,6 +246,10 @@ def _build_prometheus_integration(args: argparse.Namespace):
 
 
 def _print_payload(payload: dict[str, Any], output: str) -> None:
+    if output == "markdown" and "markdown" in payload:
+        print(payload["markdown"], end="")
+        return
+
     if output == "json":
         print(json.dumps(payload, indent=2, sort_keys=True))
         return
@@ -383,9 +429,60 @@ def _print_payload(payload: dict[str, Any], output: str) -> None:
         )
         return
 
+    if "services" in payload_body:
+        _print_table(
+            ("namespace", "name", "type", "cluster_ip", "selector", "ports"),
+            [
+                (
+                    service["namespace"],
+                    service["name"],
+                    service["type"],
+                    service["cluster_ip"] or "",
+                    ",".join(f"{key}={value}" for key, value in service["selector"].items()),
+                    ",".join(str(port["port"]) for port in service["ports"]),
+                )
+                for service in payload_body["services"]
+            ],
+        )
+        return
+
+    if "endpoints" in payload_body:
+        endpoints = payload_body["endpoints"]
+        _print_table(
+            ("service", "ip", "target", "ready"),
+            [
+                (
+                    endpoints["service_name"],
+                    address["ip"],
+                    f"{address['target_kind'] or ''}/{address['target_name'] or ''}",
+                    str(address["ready"]),
+                )
+                for address in endpoints["addresses"]
+            ],
+        )
+        return
+
+    if "ingresses" in payload_body:
+        rows = []
+        for ingress in payload_body["ingresses"]:
+            for rule in ingress["rules"]:
+                rows.append(
+                    (
+                        ingress["namespace"],
+                        ingress["name"],
+                        rule["host"] or "",
+                        rule["path"],
+                        rule["service_name"] or "",
+                    )
+                )
+        _print_table(("namespace", "name", "host", "path", "service"), rows)
+        return
+
     if "logs" in payload_body:
         logs = payload_body["logs"]
         print(f"{logs['namespace']}/{logs['pod_name']} tail={logs['tail_lines']}")
+        if logs.get("previous"):
+            print("previous: true")
         if logs["container"]:
             print(f"container: {logs['container']}")
         print(logs["text"])

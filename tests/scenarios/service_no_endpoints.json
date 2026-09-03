@@ -47,21 +47,9 @@
       }
     }
   ],
-  "events": [
-    {
-      "namespace": "platformops-demo",
-      "involved_object_name": "checkout-api-7df45b9b9c-2kq4h",
-      "involved_object_kind": "Pod",
-      "type": "Normal",
-      "reason": "Started",
-      "message": "Started container checkout-api",
-      "count": 1,
-      "first_timestamp": null,
-      "last_timestamp": null
-    }
-  ],
+  "events": [],
   "logs": {
-    "platformops-demo/checkout-api-7df45b9b9c-2kq4h": "checkout-api started\nhealth ok"
+    "platformops-demo/checkout-api-7df45b9b9c-2kq4h": "checkout-api started"
   },
   "previous_logs": {},
   "services": [
@@ -70,7 +58,7 @@
       "namespace": "platformops-demo",
       "type": "ClusterIP",
       "selector": {
-        "app": "checkout-api"
+        "app": "wrong-label"
       },
       "cluster_ip": "10.43.10.20",
       "ports": [
@@ -87,29 +75,8 @@
     {
       "service_name": "checkout-api",
       "namespace": "platformops-demo",
-      "addresses": [
-        {
-          "ip": "10.42.0.12",
-          "target_kind": "Pod",
-          "target_name": "checkout-api-7df45b9b9c-2kq4h",
-          "ready": true
-        }
-      ]
+      "addresses": []
     }
   ],
-  "ingresses": [
-    {
-      "name": "checkout-api",
-      "namespace": "platformops-demo",
-      "ingress_class": "traefik",
-      "rules": [
-        {
-          "host": "checkout.local",
-          "path": "/",
-          "service_name": "checkout-api",
-          "service_port": 80
-        }
-      ]
-    }
-  ]
+  "ingresses": []
 }

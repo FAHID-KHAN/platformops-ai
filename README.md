@@ -44,6 +44,12 @@ Generate a deterministic diagnosis report:
 platformops diagnose k8s --namespace jenkins --allowed-namespaces jenkins
 ```
 
+Diagnose a service path:
+
+```bash
+platformops diagnose service jenkins --namespace jenkins --allowed-namespaces jenkins
+```
+
 Correlate Kubernetes diagnosis with Prometheus:
 
 ```bash
@@ -57,6 +63,12 @@ Use JSON output when you want machine-readable evidence:
 
 ```bash
 platformops --output json diagnose k8s --namespace jenkins --allowed-namespaces jenkins
+```
+
+Use markdown output for incident notes:
+
+```bash
+platformops --output markdown diagnose service jenkins --namespace jenkins --allowed-namespaces jenkins
 ```
 
 ## What It Can Diagnose
@@ -105,6 +117,10 @@ platformops k8s pod POD_NAME --namespace default
 platformops k8s events --namespace default
 platformops k8s events --namespace default --pod POD_NAME
 platformops k8s logs POD_NAME --namespace default --tail-lines 100
+platformops k8s logs POD_NAME --namespace default --previous
+platformops k8s services --namespace default
+platformops k8s endpoints SERVICE_NAME --namespace default
+platformops k8s ingresses --namespace default
 ```
 
 Kubernetes investigation and diagnosis:
@@ -112,6 +128,7 @@ Kubernetes investigation and diagnosis:
 ```bash
 platformops k8s investigate --namespace default --allowed-namespaces default
 platformops diagnose k8s --namespace default --allowed-namespaces default
+platformops diagnose service SERVICE_NAME --namespace default --allowed-namespaces default
 ```
 
 Prometheus evidence:
@@ -170,8 +187,12 @@ Available MCP tools:
 - `get_pod(namespace, name)`
 - `list_events(namespace, pod_name=None)`
 - `get_pod_logs(namespace, name, container=None, tail_lines=100)`
+- `list_services(namespace)`
+- `get_endpoints(namespace, service_name)`
+- `list_ingresses(namespace)`
 - `investigate_namespace(namespace, tail_lines=50)`
 - `diagnose_namespace(namespace, tail_lines=80)`
+- `diagnose_service_path(name, namespace, tail_lines=80)`
 
 The MCP server does not require an LLM API key. It exposes tools and evidence to an MCP-capable host; the host owns model selection.
 
@@ -240,11 +261,11 @@ platformops k8s --provider fixture \
 
 ## Project Status
 
-Current release: `v0.3.0 - Observability Correlation`
+Current release: `v0.4.0 - Service Path Diagnosis`
 
 Roadmap:
 
-- `v0.4.0`: Jenkins and ArgoCD read-only delivery investigation
+- `v0.5.0`: Jenkins and ArgoCD read-only delivery investigation
 - `v0.5.0`: orchestrated investigation experiments
 - `v1.0.0`: approval-gated remediation
 

@@ -4,12 +4,18 @@ import asyncio
 
 from platformops.providers.kubernetes.models import (
     ContainerSummary,
+    EndpointAddressSummary,
+    EndpointSummary,
     EventSummary,
+    IngressRuleSummary,
+    IngressSummary,
     NamespaceSummary,
     NodeSummary,
     PodDetail,
     PodLogExcerpt,
     PodSummary,
+    ServicePortSummary,
+    ServiceSummary,
 )
 
 
@@ -122,6 +128,7 @@ class KubernetesApiProvider:
         name: str,
         container: str | None = None,
         tail_lines: int = 100,
+        previous: bool = False,
     ) -> PodLogExcerpt:
         api = self._core_v1()
         text = await asyncio.to_thread(
@@ -130,6 +137,7 @@ class KubernetesApiProvider:
             namespace=namespace,
             container=container,
             tail_lines=tail_lines,
+            previous=previous,
         )
         return PodLogExcerpt(
             namespace=namespace,
@@ -138,7 +146,61 @@ class KubernetesApiProvider:
             tail_lines=tail_lines,
             text=self._decode_log_text(text),
             truncated=False,
+            previous=previous,
         )
+
+    async def list_services(self, namespace: str) -> list[ServiceSummary]:
+        api = self._core_v1()
+        response = await asyncio.to_thread(api.list_namespaced_service, namespace=namespace)
+        return [
+            ServiceSummary(
+                name=item.metadata.name,
+                namespace=item.metadata.namespace,
+                type=item.spec.type,
+                selector=item.spec.selector or {},
+                cluster_ip=item.spec.cluster_ip if item.spec.cluster_ip != "None" else None,
+                ports=tuple(
+                    ServicePortSummary(
+                        name=port.name,
+                        port=port.port,
+                        target_port=port.target_port,
+                        protocol=port.protocol,
+                    )
+                    for port in item.spec.ports or []
+                ),
+            )
+            for item in response.items
+        ]
+
+    async def get_endpoints(self, namespace: str, service_name: str) -> EndpointSummary:
+        api = self._core_v1()
+        endpoint = await asyncio.to_thread(
+            api.read_namespaced_endpoints,
+            name=service_name,
+            namespace=namespace,
+        )
+        addresses: list[EndpointAddressSummary] = []
+        for subset in endpoint.subsets or []:
+            for address in subset.addresses or []:
+                addresses.append(self._endpoint_address(address, ready=True))
+            for address in subset.not_ready_addresses or []:
+                addresses.append(self._endpoint_address(address, ready=False))
+        return EndpointSummary(
+            service_name=service_name,
+            namespace=namespace,
+            addresses=tuple(addresses),
+        )
+
+    async def list_ingresses(self, namespace: str) -> list[IngressSummary]:
+        try:
+            from kubernetes import client
+        except ImportError as exc:
+            raise RuntimeError("Install with: pip install platformops-ai") from exc
+        if self._client is None:
+            self._core_v1()
+        networking = client.NetworkingV1Api()
+        response = await asyncio.to_thread(networking.list_namespaced_ingress, namespace=namespace)
+        return [self._ingress_summary(item) for item in response.items]
 
     def _pod_summary(self, item) -> PodSummary:
         container_statuses = item.status.container_statuses or []
@@ -176,3 +238,36 @@ class KubernetesApiProvider:
         if isinstance(text, bytes):
             return text.decode("utf-8", errors="replace")
         return str(text)
+
+    def _endpoint_address(self, address, ready: bool) -> EndpointAddressSummary:
+        target = address.target_ref
+        return EndpointAddressSummary(
+            ip=address.ip,
+            target_kind=target.kind if target else None,
+            target_name=target.name if target else None,
+            ready=ready,
+        )
+
+    def _ingress_summary(self, item) -> IngressSummary:
+        rules: list[IngressRuleSummary] = []
+        for rule in item.spec.rules or []:
+            for path in rule.http.paths if rule.http else []:
+                service = path.backend.service
+                rules.append(
+                    IngressRuleSummary(
+                        host=rule.host,
+                        path=path.path or "/",
+                        service_name=service.name if service else None,
+                        service_port=(
+                            service.port.number
+                            if service and service.port.number is not None
+                            else service.port.name if service else None
+                        ),
+                    )
+                )
+        return IngressSummary(
+            name=item.metadata.name,
+            namespace=item.metadata.namespace,
+            ingress_class=item.spec.ingress_class_name,
+            rules=tuple(rules),
+        )

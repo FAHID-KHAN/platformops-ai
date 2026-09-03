@@ -6,12 +6,18 @@ from typing import Any
 
 from platformops.providers.kubernetes.models import (
     ContainerSummary,
+    EndpointAddressSummary,
+    EndpointSummary,
     EventSummary,
+    IngressRuleSummary,
+    IngressSummary,
     NamespaceSummary,
     NodeSummary,
     PodDetail,
     PodLogExcerpt,
     PodSummary,
+    ServicePortSummary,
+    ServiceSummary,
 )
 
 
@@ -67,9 +73,11 @@ class FixtureKubernetesProvider:
         name: str,
         container: str | None = None,
         tail_lines: int = 100,
+        previous: bool = False,
     ) -> PodLogExcerpt:
+        log_key = "previous_logs" if previous else "logs"
         key = f"{namespace}/{name}"
-        logs = self._data().get("logs", {}).get(key)
+        logs = self._data().get(log_key, {}).get(key)
         if logs is None:
             await self.get_pod(namespace, name)
             logs = ""
@@ -82,4 +90,53 @@ class FixtureKubernetesProvider:
             tail_lines=tail_lines,
             text=excerpt,
             truncated=len(lines) > tail_lines,
+            previous=previous,
         )
+
+    async def list_services(self, namespace: str) -> list[ServiceSummary]:
+        services = []
+        for service in self._data().get("services", []):
+            if service["namespace"] != namespace:
+                continue
+            services.append(
+                ServiceSummary(
+                    name=service["name"],
+                    namespace=service["namespace"],
+                    type=service["type"],
+                    selector=service.get("selector", {}),
+                    cluster_ip=service.get("cluster_ip"),
+                    ports=tuple(ServicePortSummary(**port) for port in service.get("ports", [])),
+                )
+            )
+        return services
+
+    async def get_endpoints(self, namespace: str, service_name: str) -> EndpointSummary:
+        for endpoint in self._data().get("endpoints", []):
+            if endpoint["namespace"] == namespace and endpoint["service_name"] == service_name:
+                return EndpointSummary(
+                    service_name=endpoint["service_name"],
+                    namespace=endpoint["namespace"],
+                    addresses=tuple(
+                        EndpointAddressSummary(**address)
+                        for address in endpoint.get("addresses", [])
+                    ),
+                )
+        return EndpointSummary(service_name=service_name, namespace=namespace, addresses=())
+
+    async def list_ingresses(self, namespace: str) -> list[IngressSummary]:
+        ingresses = []
+        for ingress in self._data().get("ingresses", []):
+            if ingress["namespace"] != namespace:
+                continue
+            ingresses.append(
+                IngressSummary(
+                    name=ingress["name"],
+                    namespace=ingress["namespace"],
+                    ingress_class=ingress.get("ingress_class"),
+                    rules=tuple(
+                        IngressRuleSummary(**rule)
+                        for rule in ingress.get("rules", [])
+                    ),
+                )
+            )
+        return ingresses

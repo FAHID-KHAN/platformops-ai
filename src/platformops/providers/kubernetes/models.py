@@ -89,6 +89,74 @@ class PodLogExcerpt:
     tail_lines: int
     text: str
     truncated: bool
+    previous: bool = False
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
+class ServicePortSummary:
+    name: str | None
+    port: int
+    target_port: str | int | None
+    protocol: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
+class ServiceSummary:
+    name: str
+    namespace: str
+    type: str
+    selector: dict[str, str]
+    cluster_ip: str | None
+    ports: tuple[ServicePortSummary, ...]
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
+class EndpointAddressSummary:
+    ip: str
+    target_kind: str | None
+    target_name: str | None
+    ready: bool
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
+class EndpointSummary:
+    service_name: str
+    namespace: str
+    addresses: tuple[EndpointAddressSummary, ...]
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
+class IngressRuleSummary:
+    host: str | None
+    path: str
+    service_name: str | None
+    service_port: str | int | None
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
+class IngressSummary:
+    name: str
+    namespace: str
+    ingress_class: str | None
+    rules: tuple[IngressRuleSummary, ...]
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

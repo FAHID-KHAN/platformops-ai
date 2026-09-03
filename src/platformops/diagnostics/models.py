@@ -70,3 +70,30 @@ class DiagnosisReport:
             "evidence": [item.to_dict() for item in self.evidence],
         }
 
+    def to_markdown(self) -> str:
+        lines = [f"# Diagnosis: {self.status.value}", "", self.summary]
+        if self.findings:
+            lines.extend(["", "## Findings"])
+            for finding in self.findings:
+                lines.extend(
+                    [
+                        "",
+                        f"- **{finding.severity.value}**: {finding.title}",
+                        f"  - {finding.summary}",
+                    ]
+                )
+        if self.recommendations:
+            lines.extend(["", "## Recommended Next Actions"])
+            for recommendation in self.recommendations:
+                lines.append(f"- {recommendation.action}")
+        if self.evidence:
+            lines.extend(["", "## Evidence"])
+            for item in self.evidence:
+                lines.append(
+                    f"- `{item.evidence_id}` from `{item.source}` via `{item.capability}`: {item.note}"
+                )
+        if self.limitations:
+            lines.extend(["", "## Limitations"])
+            for limitation in self.limitations:
+                lines.append(f"- {limitation}")
+        return "\n".join(lines) + "\n"

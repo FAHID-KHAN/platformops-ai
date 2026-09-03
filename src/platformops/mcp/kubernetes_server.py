@@ -6,15 +6,19 @@ from pathlib import Path
 
 from platformops.domain import InvocationContext
 from platformops.diagnostics.kubernetes import diagnose_kubernetes_namespace
+from platformops.diagnostics.service import diagnose_service
 from platformops.integrations.capabilities import (
     K8S_DIAGNOSE_NAMESPACE,
+    K8S_GET_ENDPOINTS,
     K8S_GET_NODES,
     K8S_GET_POD,
     K8S_GET_POD_LOGS,
     K8S_INVESTIGATE_NAMESPACE,
+    K8S_LIST_INGRESSES,
     K8S_LIST_EVENTS,
     K8S_LIST_NAMESPACES,
     K8S_LIST_PODS,
+    K8S_LIST_SERVICES,
 )
 from platformops.policies import KubernetesReadOnlyPolicy
 from platformops.providers.kubernetes import (
@@ -109,12 +113,59 @@ async def get_pod_logs_payload(
     name: str,
     container: str | None = None,
     tail_lines: int = 100,
+    previous: bool = False,
     integration: KubernetesIntegration | None = None,
 ) -> dict:
     integration = integration or build_kubernetes_integration()
     envelope = await integration.invoke(
         K8S_GET_POD_LOGS,
-        {"namespace": namespace, "name": name, "container": container, "tail_lines": tail_lines},
+        {
+            "namespace": namespace,
+            "name": name,
+            "container": container,
+            "tail_lines": tail_lines,
+            "previous": previous,
+        },
+        InvocationContext(),
+    )
+    return envelope.to_dict()
+
+
+async def list_services_payload(
+    namespace: str,
+    integration: KubernetesIntegration | None = None,
+) -> dict:
+    integration = integration or build_kubernetes_integration()
+    envelope = await integration.invoke(
+        K8S_LIST_SERVICES,
+        {"namespace": namespace},
+        InvocationContext(),
+    )
+    return envelope.to_dict()
+
+
+async def get_endpoints_payload(
+    namespace: str,
+    service_name: str,
+    integration: KubernetesIntegration | None = None,
+) -> dict:
+    integration = integration or build_kubernetes_integration()
+    envelope = await integration.invoke(
+        K8S_GET_ENDPOINTS,
+        {"namespace": namespace, "service_name": service_name},
+        InvocationContext(),
+    )
+    return envelope.to_dict()
+
+
+async def list_ingresses_payload(
+    namespace: str,
+    integration: KubernetesIntegration | None = None,
+) -> dict:
+    integration = integration or build_kubernetes_integration()
+    envelope = await integration.invoke(
+        K8S_LIST_INGRESSES,
+        {"namespace": namespace},
         InvocationContext(),
     )
     return envelope.to_dict()
@@ -142,6 +193,24 @@ async def diagnose_namespace_payload(
 ) -> dict:
     integration = integration or build_kubernetes_integration()
     report = await diagnose_kubernetes_namespace(
+        namespace=namespace,
+        tail_lines=tail_lines,
+        integration=integration,
+        prometheus=prometheus,
+    )
+    return report.to_dict()
+
+
+async def diagnose_service_payload(
+    name: str,
+    namespace: str,
+    tail_lines: int = 80,
+    integration: KubernetesIntegration | None = None,
+    prometheus=None,
+) -> dict:
+    integration = integration or build_kubernetes_integration()
+    report = await diagnose_service(
+        name=name,
         namespace=namespace,
         tail_lines=tail_lines,
         integration=integration,
@@ -198,6 +267,7 @@ def create_server():
         name: str,
         container: str | None = None,
         tail_lines: int = 100,
+        previous: bool = False,
     ) -> dict:
         """Return a bounded read-only Kubernetes pod log excerpt."""
         return await get_pod_logs_payload(
@@ -205,8 +275,28 @@ def create_server():
             name=name,
             container=container,
             tail_lines=tail_lines,
+            previous=previous,
             integration=integration,
         )
+
+    @mcp.tool()
+    async def list_services(namespace: str) -> dict:
+        """Return read-only Kubernetes Service evidence."""
+        return await list_services_payload(namespace=namespace, integration=integration)
+
+    @mcp.tool()
+    async def get_endpoints(namespace: str, service_name: str) -> dict:
+        """Return read-only Kubernetes Endpoints evidence for a Service."""
+        return await get_endpoints_payload(
+            namespace=namespace,
+            service_name=service_name,
+            integration=integration,
+        )
+
+    @mcp.tool()
+    async def list_ingresses(namespace: str) -> dict:
+        """Return read-only Kubernetes Ingress evidence."""
+        return await list_ingresses_payload(namespace=namespace, integration=integration)
 
     @mcp.tool()
     async def investigate_namespace(namespace: str, tail_lines: int = 50) -> dict:
@@ -221,6 +311,17 @@ def create_server():
     async def diagnose_namespace(namespace: str, tail_lines: int = 80) -> dict:
         """Return a deterministic Kubernetes diagnosis report for a namespace."""
         return await diagnose_namespace_payload(
+            namespace=namespace,
+            tail_lines=tail_lines,
+            integration=integration,
+            prometheus=prometheus,
+        )
+
+    @mcp.tool()
+    async def diagnose_service_path(name: str, namespace: str, tail_lines: int = 80) -> dict:
+        """Return a deterministic service-path diagnosis report."""
+        return await diagnose_service_payload(
+            name=name,
             namespace=namespace,
             tail_lines=tail_lines,
             integration=integration,
