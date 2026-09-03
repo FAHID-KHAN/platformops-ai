@@ -60,3 +60,25 @@ def test_cli_investigates_fixture_namespace(capsys):
     assert exit_code == 0
     assert "Detected 1 unhealthy pod" in output
     assert "CrashLoopBackOff" in output or "BackOff" in output
+
+
+def test_cli_accepts_allowed_namespaces_after_subcommand(capsys):
+    exit_code = main(
+        [
+            "k8s",
+            "--provider",
+            "fixture",
+            "--fixture",
+            "tests/scenarios/crashloopbackoff.json",
+            "investigate",
+            "--namespace",
+            "platformops-demo",
+            "--allowed-namespaces",
+            "platformops-demo",
+        ]
+    )
+
+    output = capsys.readouterr().out
+
+    assert exit_code == 0
+    assert "Detected 1 unhealthy pod" in output

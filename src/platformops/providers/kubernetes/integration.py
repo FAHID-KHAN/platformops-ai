@@ -185,37 +185,68 @@ class KubernetesIntegration:
 
     async def _investigate_namespace(self, namespace: str, tail_lines: int) -> EvidenceEnvelope:
         pods = await self.provider.list_pods(namespace=namespace)
-        unhealthy = [
+        unhealthy_pods = [
             pod
             for pod in pods
-            if pod.phase not in {"Running", "Succeeded"} or not pod.ready.startswith("1/")
+            if pod.phase not in {"Running", "Succeeded"} or not self._is_ready(pod.ready)
+        ]
+        attention_pods = [
+            pod
+            for pod in pods
+            if pod in unhealthy_pods or pod.restarts > 0
         ]
         event_items = await self.provider.list_events(namespace=namespace)
         log_items = []
-        for pod in unhealthy[:5]:
+        for pod in attention_pods[:5]:
+            target_containers: list[str | None] = [None]
             try:
-                log_items.append(
-                    (
-                        await self.provider.get_pod_logs(
-                            namespace=namespace,
-                            name=pod.name,
-                            tail_lines=tail_lines,
-                        )
-                    ).to_dict()
-                )
-            except Exception as exc:  # pragma: no cover - provider/client dependent
-                log_items.append(
-                    {
-                        "namespace": namespace,
-                        "pod_name": pod.name,
-                        "error": str(exc),
-                        "tail_lines": tail_lines,
-                    }
-                )
+                detail = await self.provider.get_pod(namespace=namespace, name=pod.name)
+                interesting = [
+                    container.name
+                    for container in detail.containers
+                    if not container.ready or container.restart_count > 0
+                ]
+                if not interesting and detail.containers:
+                    interesting = [detail.containers[0].name]
+                if interesting:
+                    target_containers = interesting[:3]
+            except Exception:
+                target_containers = [None]
 
-        summary = "No unhealthy pods detected."
-        if unhealthy:
-            summary = f"Detected {len(unhealthy)} unhealthy pod(s). Check events and log excerpts."
+            for container in target_containers:
+                try:
+                    log_items.append(
+                        (
+                            await self.provider.get_pod_logs(
+                                namespace=namespace,
+                                name=pod.name,
+                                container=container,
+                                tail_lines=tail_lines,
+                            )
+                        ).to_dict()
+                    )
+                except Exception as exc:  # pragma: no cover - provider/client dependent
+                    log_items.append(
+                        {
+                            "namespace": namespace,
+                            "pod_name": pod.name,
+                            "container": container,
+                            "error": str(exc),
+                            "tail_lines": tail_lines,
+                        }
+                    )
+
+        summary = "No pods needing attention detected."
+        if unhealthy_pods:
+            summary = (
+                f"Detected {len(unhealthy_pods)} unhealthy pod(s). "
+                "Check events and log excerpts."
+            )
+        elif attention_pods:
+            summary = (
+                f"Detected {len(attention_pods)} pod(s) with restarts. "
+                "Check events and log excerpts for recent failures."
+            )
 
         return EvidenceEnvelope(
             source="kubernetes",
@@ -224,9 +255,17 @@ class KubernetesIntegration:
             payload={
                 "summary": summary,
                 "pods": [pod.to_dict() for pod in pods],
-                "unhealthy_pods": [pod.to_dict() for pod in unhealthy],
+                "unhealthy_pods": [pod.to_dict() for pod in unhealthy_pods],
+                "attention_pods": [pod.to_dict() for pod in attention_pods],
                 "events": [event.to_dict() for event in event_items],
                 "log_excerpts": log_items,
             },
             scope={"namespace": namespace, "tail_lines": tail_lines},
         )
+
+    def _is_ready(self, ready: str) -> bool:
+        try:
+            ready_count, total_count = ready.split("/", maxsplit=1)
+            return int(ready_count) == int(total_count)
+        except ValueError:
+            return False

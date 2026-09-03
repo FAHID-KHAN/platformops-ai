@@ -8,6 +8,86 @@ from platformops.integrations.capabilities import (
 from platformops.domain import InvocationContext
 from platformops.policies import KubernetesReadOnlyPolicy
 from platformops.providers.kubernetes import FakeKubernetesProvider, KubernetesIntegration
+from platformops.providers.kubernetes.models import (
+    ContainerSummary,
+    EventSummary,
+    NamespaceSummary,
+    NodeSummary,
+    PodDetail,
+    PodLogExcerpt,
+    PodSummary,
+)
+
+
+class RestartedMultiContainerProvider:
+    async def list_nodes(self):
+        return [NodeSummary(name="node-1", ready=True)]
+
+    async def list_namespaces(self):
+        return [NamespaceSummary(name="jenkins", status="Active")]
+
+    async def list_pods(self, namespace=None):
+        return [
+            PodSummary(
+                name="jenkins-0",
+                namespace="jenkins",
+                phase="Running",
+                ready="2/2",
+                restarts=4,
+                node_name="node-1",
+            )
+        ]
+
+    async def get_pod(self, namespace, name):
+        return PodDetail(
+            name=name,
+            namespace=namespace,
+            phase="Running",
+            ready="2/2",
+            restarts=4,
+            node_name="node-1",
+            service_account="jenkins",
+            containers=(
+                ContainerSummary(
+                    name="jenkins",
+                    ready=True,
+                    restart_count=4,
+                    state="running",
+                ),
+                ContainerSummary(
+                    name="config-reload",
+                    ready=True,
+                    restart_count=0,
+                    state="running",
+                ),
+            ),
+            conditions={"Ready": "True", "PodScheduled": "True"},
+        )
+
+    async def list_events(self, namespace, pod_name=None):
+        return [
+            EventSummary(
+                namespace=namespace,
+                involved_object_name="jenkins-0",
+                involved_object_kind="Pod",
+                type="Warning",
+                reason="BackOff",
+                message="Restarted container jenkins",
+                count=4,
+            )
+        ]
+
+    async def get_pod_logs(self, namespace, name, container=None, tail_lines=100):
+        if container is None:
+            raise ValueError("container name must be specified")
+        return PodLogExcerpt(
+            namespace=namespace,
+            pod_name=name,
+            container=container,
+            tail_lines=tail_lines,
+            text="jenkins recovered",
+            truncated=False,
+        )
 
 
 async def test_get_nodes_returns_evidence_envelope():
@@ -93,3 +173,19 @@ async def test_investigate_namespace_returns_summary():
 
     assert data["evidence_type"] == "kubernetes-investigation"
     assert "summary" in data["payload"]
+
+
+async def test_investigate_ready_restarted_multicontainer_pod_uses_container_logs():
+    integration = KubernetesIntegration(RestartedMultiContainerProvider())
+
+    envelope = await integration.invoke(
+        K8S_INVESTIGATE_NAMESPACE,
+        {"namespace": "jenkins"},
+        InvocationContext(),
+    )
+    data = envelope.to_dict()
+
+    assert data["payload"]["unhealthy_pods"] == []
+    assert data["payload"]["attention_pods"][0]["name"] == "jenkins-0"
+    assert data["payload"]["log_excerpts"][0]["container"] == "jenkins"
+    assert data["payload"]["log_excerpts"][0]["text"] == "jenkins recovered"

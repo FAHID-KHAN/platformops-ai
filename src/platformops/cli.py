@@ -40,26 +40,37 @@ def build_parser() -> argparse.ArgumentParser:
     k8s.add_argument("--fixture", default="tests/scenarios/healthy_cluster.json")
 
     k8s_commands = k8s.add_subparsers(dest="command", required=True)
-    k8s_commands.add_parser("nodes", help="List Kubernetes nodes")
-    k8s_commands.add_parser("namespaces", help="List Kubernetes namespaces")
+    nodes = k8s_commands.add_parser("nodes", help="List Kubernetes nodes")
+    _add_policy_args(nodes)
+    namespaces = k8s_commands.add_parser("namespaces", help="List Kubernetes namespaces")
+    _add_policy_args(namespaces)
     pods = k8s_commands.add_parser("pods", help="List Kubernetes pods")
     pods.add_argument("--namespace", "-n", default=None)
+    _add_policy_args(pods)
     pod = k8s_commands.add_parser("pod", help="Show Kubernetes pod details")
     pod.add_argument("name")
     pod.add_argument("--namespace", "-n", required=True)
+    _add_policy_args(pod)
     events = k8s_commands.add_parser("events", help="List Kubernetes events")
     events.add_argument("--namespace", "-n", required=True)
     events.add_argument("--pod", default=None)
+    _add_policy_args(events)
     logs = k8s_commands.add_parser("logs", help="Show a bounded Kubernetes pod log excerpt")
     logs.add_argument("name")
     logs.add_argument("--namespace", "-n", required=True)
     logs.add_argument("--container", "-c", default=None)
     logs.add_argument("--tail-lines", type=int, default=100)
+    _add_policy_args(logs)
     investigate = k8s_commands.add_parser("investigate", help="Investigate a namespace")
     investigate.add_argument("--namespace", "-n", required=True)
     investigate.add_argument("--tail-lines", type=int, default=50)
+    _add_policy_args(investigate)
 
     return parser
+
+
+def _add_policy_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--allowed-namespaces", default=argparse.SUPPRESS)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -137,7 +148,7 @@ def _print_payload(payload: dict[str, Any], output: str) -> None:
     payload_body = payload.get("payload", {})
     if "unhealthy_pods" in payload_body:
         print(payload_body["summary"])
-        pods = payload_body["unhealthy_pods"] or payload_body["pods"]
+        pods = payload_body["unhealthy_pods"] or payload_body.get("attention_pods", []) or payload_body["pods"]
         if pods:
             print("\npods")
             _print_table(

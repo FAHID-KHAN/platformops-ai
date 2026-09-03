@@ -136,7 +136,7 @@ class KubernetesApiProvider:
             pod_name=name,
             container=container,
             tail_lines=tail_lines,
-            text=text,
+            text=self._decode_log_text(text),
             truncated=False,
         )
 
@@ -171,3 +171,8 @@ class KubernetesApiProvider:
             state=state,
             reason=reason,
         )
+
+    def _decode_log_text(self, text) -> str:
+        if isinstance(text, bytes):
+            return text.decode("utf-8", errors="replace")
+        return str(text)
