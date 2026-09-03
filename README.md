@@ -1,10 +1,34 @@
+<div align="center">
+
 # PlatformOps AI
 
-Read-only, model-agnostic MCP tools and CLI workflows for evidence-grounded platform operations.
+**Read-only AI operations tooling for Kubernetes, Prometheus, and MCP.**
 
-PlatformOps AI helps operators investigate Kubernetes workloads without giving an AI model unrestricted infrastructure access. It collects structured evidence from official APIs, correlates Kubernetes and Prometheus signals, applies deterministic diagnosis rules, and returns operator-readable reports with evidence and limitations.
+[![PyPI](https://img.shields.io/pypi/v/platformops-ai?label=pypi)](https://pypi.org/project/platformops-ai/)
+![Python](https://img.shields.io/badge/python-3.11%2B-blue)
+![Kubernetes](https://img.shields.io/badge/kubernetes-read--only-326ce5)
+![Prometheus](https://img.shields.io/badge/prometheus-correlation-e6522c)
+![MCP](https://img.shields.io/badge/MCP-tools-6f42c1)
+[![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
 
-The current release focuses on Kubernetes. The architecture is designed to grow into observability, CI/CD, GitOps, source control, and approval-gated remediation.
+[Quick Start](#quick-start) . [CLI](#cli-reference) . [MCP](#mcp-server) . [Diagnosis](#what-it-can-diagnose) . [Runbooks](docs/README.md) . [Architecture](docs/architecture/overview.md) . [Roadmap](docs/roadmap.md) . [Contributing](CONTRIBUTING.md) . [Security](SECURITY.md)
+
+<table>
+  <tr>
+    <td><strong>Install</strong></td>
+    <td><code>pip install platformops-ai</code></td>
+  </tr>
+</table>
+
+PlatformOps AI collects structured platform evidence from official APIs, applies deterministic diagnosis rules, and exposes the same safe investigation workflows through a CLI and an MCP server.
+
+</div>
+
+## Why PlatformOps AI
+
+PlatformOps AI helps operators investigate Kubernetes workloads without giving an AI model unrestricted infrastructure access. It can inspect namespaces, pods, events, logs, Services, Endpoints, Ingresses, and Prometheus signals, then return operator-readable reports with evidence and limitations.
+
+The current release focuses on read-only Kubernetes and Prometheus investigation. The architecture is designed to grow into CI/CD, GitOps, source control, controlled orchestration, and approval-gated remediation.
 
 Jenkins appears in examples because it is a familiar platform workload, but PlatformOps AI is not Jenkins-specific. It can inspect any Kubernetes namespace or service that your kubeconfig can read and that you include in the namespace allowlist.
 
