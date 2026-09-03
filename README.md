@@ -205,6 +205,15 @@ PlatformOps also ships an MCP server:
 platformops-mcp-k8s
 ```
 
+The MCP server is for AI applications that support the Model Context Protocol. PlatformOps provides the tools; your MCP host provides the chat UI, model, and tool-calling loop.
+
+```text
+User
+  -> MCP host and selected LLM
+  -> PlatformOps MCP server
+  -> Kubernetes API and optional Prometheus API
+```
+
 Example MCP client configuration:
 
 ```json
@@ -219,6 +228,48 @@ Example MCP client configuration:
     }
   }
 }
+```
+
+Use fake mode when you want to test tool discovery without a cluster:
+
+```json
+{
+  "mcpServers": {
+    "platformops-kubernetes": {
+      "command": "platformops-mcp-k8s",
+      "env": {
+        "PLATFORMOPS_K8S_PROVIDER": "fake",
+        "PLATFORMOPS_PROMETHEUS_PROVIDER": "fake"
+      }
+    }
+  }
+}
+```
+
+Use API mode for a real cluster. The MCP server uses the kubeconfig or service account available to the process:
+
+```json
+{
+  "mcpServers": {
+    "platformops-kubernetes": {
+      "command": "platformops-mcp-k8s",
+      "env": {
+        "PLATFORMOPS_K8S_PROVIDER": "api",
+        "PLATFORMOPS_K8S_ALLOWED_NAMESPACES": "argocd,jenkins,monitoring",
+        "PLATFORMOPS_PROMETHEUS_URL": "http://localhost:9090"
+      }
+    }
+  }
+}
+```
+
+Example questions to ask your MCP host:
+
+```text
+What pods are unhealthy in the jenkins namespace?
+Diagnose the argocd-server service in the argocd namespace.
+Check whether Prometheus has firing alerts related to monitoring.
+List Kubernetes services in the jenkins namespace.
 ```
 
 Available MCP tools:
@@ -321,6 +372,7 @@ Roadmap:
 - [Kubernetes diagnosis runbook](docs/runbooks/kubernetes-diagnosis.md)
 - [Prometheus correlation runbook](docs/runbooks/prometheus-correlation.md)
 - [Service path diagnosis runbook](docs/runbooks/service-diagnosis.md)
+- [MCP server runbook](docs/runbooks/mcp-server.md)
 - [Roadmap](docs/roadmap.md)
 - [ADR index](docs/adr/README.md)
 - [Security policy](SECURITY.md)
