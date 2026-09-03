@@ -4,17 +4,21 @@
 
 **Status:** Living design document  
 **Initial release:** `v0.1.0 — Kubernetes Investigator`  
-**Project type:** Open-source, MCP-powered agentic platform-engineering project
+**Project type:** Open-source, model-agnostic agentic operations platform
 
 ---
 
 ## 1. Vision
 
-PlatformOps AI is an open-source incident investigation and response platform for Kubernetes. It allows an AI agent to collect operational evidence through controlled MCP tools, correlate that evidence, explain likely causes, recommend actions, and—only in later versions—perform human-approved remediation.
+PlatformOps AI is an open-source, model-agnostic agentic operations platform. It investigates and correlates evidence across infrastructure, cloud, observability, CI/CD, GitOps, source control, databases, networking, security, and incident-management systems through governed MCP integrations.
+
+Kubernetes is the first reference integration and the first complete vertical slice. It is not the architectural boundary of the product.
+
+PlatformOps AI allows an agent to collect operational evidence through controlled tools, correlate signals from multiple systems, explain likely causes, recommend actions, and—only in later versions—perform human-approved remediation.
 
 The project begins as a portable open-source product. Fahid's K3s homelab is its first real integration and staging environment, not a hard-coded dependency.
 
-> Build a safe, evidence-grounded AI Platform Engineer that works with any Kubernetes cluster and can be validated against a real platform stack.
+> Build a safe, extensible, evidence-grounded AI operations platform that works across a user's existing toolchain and can be validated against real infrastructure.
 
 Long-term incident lifecycle:
 
@@ -40,16 +44,18 @@ Verify
 
 ## 2. Core design principles
 
-1. **Open-source first** — no dependency on one person's cluster, network, credentials, or model account.
+1. **Open-source first** — no dependency on one person's cluster, toolchain, network, credentials, or model account.
 2. **Read-only first** — `v0.x` investigates but cannot mutate infrastructure.
 3. **Least privilege** — every integration uses narrowly scoped identities and permissions.
-4. **Kubernetes API, not shell access** — the agent never receives arbitrary SSH or `kubectl` execution.
+4. **Official APIs, not arbitrary shell access** — integrations use supported service APIs and narrowly scoped capabilities.
 5. **Model agnostic** — users can use an existing MCP host or configure their preferred LLM provider.
 6. **Structured evidence** — tools return typed, predictable data rather than raw command output.
 7. **Evidence-grounded diagnosis** — every important claim references collected evidence.
 8. **Human approval for remediation** — future write operations require an explicit approval boundary.
 9. **Observable and testable** — tool calls, latency, errors, decisions, and outcomes are measurable.
-10. **Portable deployment** — the same artifact should work with fixture data, a disposable test cluster, the homelab, or a production-style Kubernetes environment.
+10. **Portable deployment** — the same artifact should work with fixtures, disposable environments, the homelab, or a production-style platform stack.
+11. **Integration independence** — the core reasons about common capabilities and evidence, not vendor-specific implementation details.
+12. **Community extensibility** — contributors can add integrations without modifying the core agent.
 
 ---
 
@@ -163,6 +169,137 @@ External systems
 
 The MCP layer must not contain Kubernetes-specific business reasoning. MCP tools invoke application services, which use stable provider contracts.
 
+### 5.1 Supported integration domains
+
+| Domain | Example systems |
+|---|---|
+| Container orchestration | Kubernetes, K3s, EKS, AKS, GKE, OpenShift |
+| Observability | Prometheus, Grafana, Loki, InfluxDB, OpenTelemetry, Datadog |
+| CI/CD | Jenkins, GitHub Actions, GitLab CI, Azure DevOps |
+| GitOps | ArgoCD, Flux |
+| Source control | GitHub, GitLab, Bitbucket |
+| Cloud platforms | AWS, Azure, GCP, Cloudflare |
+| Infrastructure as code | Terraform, OpenTofu, Pulumi |
+| Containers and registries | Docker, containerd, OCI registries |
+| Databases and data stores | PostgreSQL, MySQL, Redis |
+| Networking | DNS, ingress controllers, gateways, load balancers |
+| Security | Trivy, Falco, policy engines, cloud-security services |
+| Incident management | PagerDuty, Opsgenie, ServiceNow |
+| Work tracking | Jira, Linear |
+| Communication | Slack, Microsoft Teams |
+
+This table is a direction, not a promise to implement every integration in the initial releases.
+
+### 5.2 Integration registry
+
+PlatformOps should discover enabled integrations through a registry rather than hard-coded agent branches.
+
+```text
+PlatformOps Agent
+        ↓
+Integration Registry
+        ├── Kubernetes integration
+        ├── Prometheus integration
+        ├── Jenkins integration
+        ├── ArgoCD integration
+        ├── GitHub integration
+        └── community integrations
+```
+
+Each integration declares its identity, capabilities, risk level, configuration schema, health state, and authentication requirements.
+
+```yaml
+integration:
+  id: prometheus
+  version: 1
+  capabilities:
+    - metrics.query
+    - alerts.list
+    - targets.inspect
+  risk_level: read-only
+  authentication:
+    type: bearer-token
+  evidence_types:
+    - metric-series
+    - alert
+    - scrape-target
+```
+
+The registry must not contain credentials. It contains metadata and references to secret configuration.
+
+### 5.3 Vendor-neutral capabilities
+
+The core agent should reason about operational intent through common capability names:
+
+```text
+workload.list
+workload.get_status
+logs.query
+metrics.query
+alerts.list
+deployment.get_status
+pipeline.get_failure
+source.get_recent_changes
+incident.create
+```
+
+A provider maps a capability to a vendor-specific operation:
+
+```text
+metrics.query
+├── Prometheus
+├── InfluxDB
+├── Datadog
+└── Azure Monitor
+```
+
+Vendor-specific tools remain possible when a system has unique functionality. The common capability vocabulary should cover shared operational intent without forcing every provider into an inaccurate abstraction.
+
+### 5.4 Integration SDK
+
+The public project should eventually include an Integration Development Kit that enables contributors to implement adapters consistently.
+
+An integration package should provide:
+
+- a manifest and configuration schema;
+- one or more capability implementations;
+- typed input and output contracts;
+- authentication and secret references;
+- declared risk levels;
+- health and readiness checks;
+- data-redaction rules;
+- unit and contract tests;
+- fixtures and example configuration;
+- documentation and compatibility metadata.
+
+The core application loads only explicitly enabled and trusted integrations. Installing an integration must not automatically grant it credentials or permissions.
+
+### 5.5 Example cross-system investigation
+
+```text
+Question: Why did checkout become unavailable?
+
+Kubernetes
+  → pods began restarting at 13:42
+
+Prometheus
+  → error rate increased at 13:41
+
+ArgoCD
+  → a new revision synchronized at 13:39
+
+GitHub
+  → the revision changed DATABASE_URL
+
+Jenkins
+  → deployment completed but its smoke test was skipped
+
+Diagnosis
+  → the latest release likely introduced an invalid database endpoint
+```
+
+The report references evidence from every contributing system and distinguishes observed facts from inferred causality.
+
 ---
 
 ## 6. Proposed repository structure
@@ -182,13 +319,19 @@ platformops-ai/
 │
 ├── packages/
 │   ├── platformops-core/          # Domain models and workflows
-│   ├── platformops-mcp-k8s/       # Kubernetes MCP server; no LLM required
-│   └── platformops-agent/         # Optional standalone agent
+│   ├── platformops-agent/         # Optional standalone agent
+│   ├── platformops-policy/        # Shared authorization and risk controls
+│   ├── platformops-integration-sdk/
+│   └── platformops-mcp-k8s/       # First reference integration
 │
 ├── src/platformops/
 │   ├── agent/                     # Controlled investigation workflow
 │   ├── domain/                    # Evidence, findings and reports
 │   ├── policies/                  # Authorization and safety policies
+│   ├── integrations/
+│   │   ├── registry.py
+│   │   ├── capabilities.py
+│   │   └── manifests.py
 │   ├── providers/
 │   │   ├── kubernetes/
 │   │   ├── prometheus/
@@ -203,6 +346,15 @@ platformops-ai/
 │   │   └── openai_compatible.py
 │   ├── reports/
 │   └── telemetry/
+│
+├── integrations/
+│   ├── kubernetes/
+│   ├── prometheus/
+│   ├── grafana/
+│   ├── influxdb/
+│   ├── jenkins/
+│   ├── argocd/
+│   └── github/
 │
 ├── deploy/
 │   ├── docker/
@@ -240,9 +392,30 @@ The exact packaging may evolve, but the architectural boundaries should remain.
 
 ---
 
-## 7. Provider contracts
+## 7. Integration and provider contracts
 
 External integrations should implement stable internal interfaces.
+
+The generic contract describes an integration independently of its vendor:
+
+```python
+from typing import Protocol
+
+class PlatformIntegration(Protocol):
+    @property
+    def manifest(self) -> "IntegrationManifest": ...
+
+    async def health(self) -> "IntegrationHealth": ...
+
+    async def invoke(
+        self,
+        capability: str,
+        arguments: dict,
+        context: "InvocationContext",
+    ) -> "EvidenceEnvelope": ...
+```
+
+Specific provider protocols can offer stronger typing inside an integration:
 
 ```python
 from typing import Protocol
@@ -268,9 +441,12 @@ KubernetesProvider
 Benefits:
 
 - Contributors need no homelab to run tests.
-- Kubernetes client code is replaceable without changing MCP tools.
+- Vendor client code is replaceable without changing the investigation core.
 - Failure scenarios can be replayed deterministically.
 - Future providers follow the same architectural pattern.
+- Community adapters can be validated through shared contract tests.
+
+An `EvidenceEnvelope` should include source integration, capability, collection time, resource scope, redaction status, payload schema version, and a unique evidence ID.
 
 ---
 
@@ -590,6 +766,8 @@ They must never be required for an external contributor's pull request.
 ```text
 platformops-ai/
 ├── application source
+├── integration registry and SDK
+├── first-party integrations
 ├── generic Helm chart
 ├── example configuration
 ├── controlled failure scenarios
@@ -688,7 +866,7 @@ Reproducible installation
 
 ### `v0.1.0 — Kubernetes Investigator`
 
-Goal: a model-independent, read-only Kubernetes MCP server with structured results, plus an optional reference agent.
+Goal: prove the generic PlatformOps integration, evidence, policy, and MCP architecture through a model-independent, read-only Kubernetes reference integration, plus an optional reference agent.
 
 Initial MCP tools:
 
@@ -714,12 +892,21 @@ Required release capabilities:
 - Prometheus provider and MCP capabilities;
 - correlate Kubernetes health with CPU, memory, restarts, and latency;
 - add investigation metrics and initial Grafana dashboard.
+- validate the first cross-integration investigation using common evidence contracts.
 
 ### `v0.3.0 — Delivery Investigator`
 
 - Jenkins and ArgoCD read-only providers;
 - correlate deployment state, revisions, pipeline failures, and cluster symptoms;
 - maintain evidence attribution across providers.
+
+### `v0.3.x — Integration SDK Preview`
+
+- publish integration manifests and lifecycle contracts;
+- publish the initial vendor-neutral capability vocabulary;
+- provide a project template and shared contract-test suite;
+- document authentication, redaction, permissions, and risk declaration;
+- demonstrate one small community-style example integration.
 
 ### `v0.4.0 — Orchestrated Investigation`
 
@@ -753,18 +940,20 @@ The result must come through PlatformOps from the real Kubernetes API and use st
 1. Create the public repository and governance files.
 2. Bootstrap the Python project.
 3. Define initial domain response models.
-4. Create the Kubernetes provider protocol.
-5. Implement `FakeKubernetesProvider`.
-6. Implement the real Kubernetes API provider.
-7. Implement `get_nodes()`.
-8. Implement `list_namespaces()`.
-9. Implement `list_pods()`.
-10. Expose the operations as MCP tools.
-11. Add unit and contract tests.
-12. Create a disposable `kind` integration test.
-13. Document connection from an existing MCP host.
-14. Add Docker packaging.
-15. Validate locally against the K3s homelab.
+4. Define the initial integration manifest and evidence envelope.
+5. Create the generic integration registry and capability contract.
+6. Create the Kubernetes provider protocol.
+7. Implement `FakeKubernetesProvider`.
+8. Implement the real Kubernetes API provider.
+9. Implement `get_nodes()`.
+10. Implement `list_namespaces()`.
+11. Implement `list_pods()`.
+12. Expose the operations as MCP tools.
+13. Add unit and contract tests.
+14. Create a disposable `kind` integration test.
+15. Document connection from an existing MCP host.
+16. Add Docker packaging.
+17. Validate locally against the K3s homelab.
 
 ### Sprint acceptance criteria
 
@@ -789,6 +978,9 @@ The result must come through PlatformOps from the real Kubernetes API and use st
 6. **ADR-006: Use structured evidence and attributable diagnoses**
 7. **ADR-007: Separate public product configuration from private environments**
 8. **ADR-008: Validate with fixtures, disposable clusters, and homelab staging**
+9. **ADR-009: Treat Kubernetes as the first reference integration, not the product boundary**
+10. **ADR-010: Introduce an integration registry and vendor-neutral capability vocabulary**
+11. **ADR-011: Provide a contract-tested SDK for trusted community integrations**
 
 ---
 
@@ -797,8 +989,12 @@ The result must come through PlatformOps from the real Kubernetes API and use st
 The project is succeeding when:
 
 - an external user can understand and run it without Fahid's infrastructure;
+- the core platform remains useful beyond Kubernetes;
+- Kubernetes remains the first reference integration rather than a hard-coded architectural dependency;
 - an MCP-only user can use the Kubernetes server without configuring an LLM inside PlatformOps;
 - a standalone-agent user can bring a cloud or local model without modifying core code;
+- users can enable only the integrations required by their environment;
+- contributors can add an integration through the SDK and shared contracts without changing the agent core;
 - investigations cite real evidence and clearly state uncertainty;
 - security boundaries remain enforceable even when the model makes a bad decision;
 - CI reproduces real Kubernetes failure scenarios;
@@ -807,5 +1003,4 @@ The project is succeeding when:
 
 The central product promise is:
 
-> PlatformOps AI gives agents governed access to operational evidence. It does not give models unrestricted control of infrastructure.
-
+> PlatformOps AI gives agents governed access to operational evidence across the platform toolchain. It does not give models unrestricted control of infrastructure or operational systems.
