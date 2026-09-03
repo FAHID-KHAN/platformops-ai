@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "platformops-kubernetes": {
+      "command": "platformops-mcp-k8s",
+      "env": {
+        "PLATFORMOPS_K8S_PROVIDER": "fake",
+        "PLATFORMOPS_K8S_ALLOWED_NAMESPACES": "default,platformops-demo,kube-system"
+      }
+    }
+  }
+}
+

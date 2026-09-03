@@ -1,0 +1,15 @@
+from platformops.integrations.capabilities import (
+    K8S_GET_NODES,
+    K8S_LIST_NAMESPACES,
+    K8S_LIST_PODS,
+)
+from platformops.integrations.registry import IntegrationRegistry, PlatformIntegration
+
+__all__ = [
+    "IntegrationRegistry",
+    "K8S_GET_NODES",
+    "K8S_LIST_NAMESPACES",
+    "K8S_LIST_PODS",
+    "PlatformIntegration",
+]
+

@@ -1,0 +1,14 @@
+image:
+  repository: platformops-ai
+  tag: "0.1.0"
+  pullPolicy: IfNotPresent
+
+provider: api
+allowedNamespaces:
+  - default
+
+rbac:
+  clusterWide: false
+
+resources: {}
+

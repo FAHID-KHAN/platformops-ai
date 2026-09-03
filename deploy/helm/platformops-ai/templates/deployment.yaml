@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "platformops-ai.fullname" . }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "platformops-ai.fullname" . }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "platformops-ai.fullname" . }}
+    spec:
+      serviceAccountName: {{ include "platformops-ai.fullname" . }}
+      containers:
+        - name: platformops-ai
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: PLATFORMOPS_K8S_PROVIDER
+              value: {{ .Values.provider | quote }}
+            - name: PLATFORMOPS_K8S_IN_CLUSTER
+              value: "true"
+            - name: PLATFORMOPS_K8S_ALLOWED_NAMESPACES
+              value: {{ join "," .Values.allowedNamespaces | quote }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+

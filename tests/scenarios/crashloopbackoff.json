@@ -1,0 +1,27 @@
+{
+  "nodes": [
+    {
+      "name": "fixture-control-plane",
+      "ready": true,
+      "roles": ["control-plane"],
+      "kubernetes_version": "v1.30.0"
+    }
+  ],
+  "namespaces": [
+    {
+      "name": "platformops-demo",
+      "status": "Active"
+    }
+  ],
+  "pods": [
+    {
+      "name": "checkout-api-7df45b9b9c-crash",
+      "namespace": "platformops-demo",
+      "phase": "Running",
+      "ready": "0/1",
+      "restarts": 7,
+      "node_name": "fixture-control-plane"
+    }
+  ]
+}
+
