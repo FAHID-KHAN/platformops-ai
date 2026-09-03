@@ -66,6 +66,7 @@ Use API mode when the MCP server process has kubeconfig access or runs inside a 
 
 ```text
 What nodes and namespaces can PlatformOps see?
+Scan argocd, jenkins, and monitoring and rank what needs attention.
 Diagnose the jenkins namespace.
 Diagnose the argocd-server service in the argocd namespace.
 List services and endpoints in the monitoring namespace.
@@ -86,9 +87,24 @@ Check Prometheus targets and alerts.
 - `investigate_namespace(namespace, tail_lines=50)`
 - `diagnose_namespace(namespace, tail_lines=80)`
 - `diagnose_service_path(name, namespace, tail_lines=80)`
+- `scan_cluster(namespaces=None, tail_lines=80)`
 - `prometheus_query(query)`
 - `prometheus_targets()`
 - `prometheus_alerts()`
+
+## Cluster Triage
+
+Use `scan_cluster` when you want the MCP host to inspect multiple allowed namespaces and rank what needs attention.
+
+If `namespaces` is omitted, PlatformOps uses `PLATFORMOPS_K8S_ALLOWED_NAMESPACES` from the MCP server environment.
+
+Example prompt:
+
+```text
+Scan argocd, jenkins, and monitoring and give me the highest-risk findings first.
+```
+
+The tool remains read-only and only returns evidence from namespaces allowed by policy.
 
 ## Security Notes
 
@@ -97,4 +113,3 @@ Check Prometheus targets and alerts.
 - The MCP server does not need an LLM API key.
 - Kubernetes credentials stay with the MCP server process.
 - Do not expose kubeconfig, service-account tokens, `.env` files, or sensitive logs.
-

@@ -174,3 +174,44 @@ def test_cli_diagnoses_service_markdown(capsys):
     assert exit_code == 0
     assert "# Diagnosis: critical" in output
     assert "has no ready endpoints" in output
+
+
+def test_cli_scans_cluster_across_allowed_namespaces(capsys):
+    exit_code = main(
+        [
+            "scan",
+            "cluster",
+            "--provider",
+            "fixture",
+            "--fixture",
+            "tests/scenarios/multi_namespace_triage.json",
+            "--allowed-namespaces",
+            "platformops-demo,jenkins",
+        ]
+    )
+
+    output = capsys.readouterr().out
+
+    assert exit_code == 0
+    assert "Cluster status: critical" in output
+    assert "jenkins - jenkins-0 is crash looping" in output
+    assert "platformops-demo" in output
+
+
+def test_cli_cluster_scan_requires_allowed_namespaces(capsys):
+    exit_code = main(
+        [
+            "scan",
+            "cluster",
+            "--provider",
+            "fixture",
+            "--fixture",
+            "tests/scenarios/multi_namespace_triage.json",
+        ]
+    )
+
+    output = capsys.readouterr().out
+
+    assert exit_code == 0
+    assert "Cluster status: unknown" in output
+    assert "requires --allowed-namespaces" in output

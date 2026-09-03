@@ -5,6 +5,7 @@ from platformops.mcp.kubernetes_server import (
     get_nodes_payload,
     list_pods_payload,
     list_services_payload,
+    scan_cluster_payload,
 )
 from platformops.mcp.prometheus_server import prometheus_alerts_payload, prometheus_targets_payload
 from platformops.policies import KubernetesReadOnlyPolicy
@@ -67,3 +68,18 @@ async def test_mcp_service_payload_helpers_return_evidence():
     assert services["payload"]["services"][0]["name"] == "checkout-api"
     assert endpoints["payload"]["endpoints"]["addresses"][0]["ready"] is True
     assert diagnosis["findings"]
+
+
+async def test_mcp_cluster_scan_payload_helper_returns_ranked_report():
+    integration = KubernetesIntegration(FakeKubernetesProvider())
+
+    payload = await scan_cluster_payload(
+        namespaces=["platformops-demo", "kube-system"],
+        integration=integration,
+    )
+
+    report = payload["cluster_scan"]
+
+    assert report["status"] == "healthy"
+    assert report["namespaces"]
+    assert "markdown" in payload

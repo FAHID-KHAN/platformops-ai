@@ -10,6 +10,7 @@ This folder contains the product documentation for PlatformOps AI.
 - [Kubernetes diagnosis](runbooks/kubernetes-diagnosis.md)
 - [Prometheus correlation](runbooks/prometheus-correlation.md)
 - [Service path diagnosis](runbooks/service-diagnosis.md)
+- [Cluster triage](runbooks/cluster-triage.md)
 - [MCP server](runbooks/mcp-server.md)
 
 ## Source Planning Documents

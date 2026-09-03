@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.0
+
+- Added cluster-level triage with `platformops scan cluster`.
+- Added ranked findings across multiple allowed namespaces.
+- Added cluster scan markdown and JSON output for incident notes and automation.
+- Added MCP `scan_cluster` support for AI hosts.
+- Added fixture coverage and tests for multi-namespace triage.
+
 ## 0.4.0
 
 - Added Kubernetes Service, Endpoints, and Ingress evidence.

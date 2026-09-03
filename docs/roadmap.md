@@ -47,19 +47,26 @@ Required capabilities:
 - Previous container logs.
 - Markdown incident report output.
 
-## v0.5.0 - Delivery Investigator
+## v0.5.0 - Cluster Triage
+
+- Multi-namespace scanning from an explicit namespace allowlist.
+- Ranked findings across namespaces.
+- Cluster scan CLI, MCP tool, JSON output, and markdown incident notes.
+- Homelab-friendly examples for scanning platform namespaces such as ArgoCD, Jenkins, and monitoring.
+
+## v0.6.0 - Delivery Investigator
 
 - Jenkins and ArgoCD read-only providers.
 - Correlate deployments, revisions, pipeline failures, and Kubernetes symptoms.
 
-## v0.5.x - Integration SDK Preview
+## v0.6.x - Integration SDK Preview
 
 - Integration manifests.
 - Vendor-neutral capability vocabulary.
 - Contract-test suite.
 - Example community-style integration.
 
-## v0.6.0 - Orchestrated Investigation
+## v0.7.0 - Orchestrated Investigation
 
 - Supervisor and specialist-agent experiments.
 - Checkpoints, handoffs, retries, and bounded context.

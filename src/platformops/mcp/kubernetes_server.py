@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 
 from platformops.domain import InvocationContext
+from platformops.diagnostics.cluster import scan_cluster as scan_kubernetes_cluster
 from platformops.diagnostics.kubernetes import diagnose_kubernetes_namespace
 from platformops.diagnostics.service import diagnose_service
 from platformops.integrations.capabilities import (
@@ -219,6 +220,23 @@ async def diagnose_service_payload(
     return report.to_dict()
 
 
+async def scan_cluster_payload(
+    namespaces: list[str] | None = None,
+    tail_lines: int = 80,
+    integration: KubernetesIntegration | None = None,
+    prometheus=None,
+) -> dict:
+    integration = integration or build_kubernetes_integration()
+    selected_namespaces = namespaces or sorted(integration.policy.allowed_namespaces)
+    report = await scan_kubernetes_cluster(
+        namespaces=selected_namespaces,
+        tail_lines=tail_lines,
+        integration=integration,
+        prometheus=prometheus,
+    )
+    return {"cluster_scan": report.to_dict(), "markdown": report.to_markdown()}
+
+
 def create_server():
     try:
         from mcp.server.fastmcp import FastMCP
@@ -323,6 +341,23 @@ def create_server():
         return await diagnose_service_payload(
             name=name,
             namespace=namespace,
+            tail_lines=tail_lines,
+            integration=integration,
+            prometheus=prometheus,
+        )
+
+    @mcp.tool()
+    async def scan_cluster(namespaces: str | None = None, tail_lines: int = 80) -> dict:
+        """Scan one or more allowed namespaces and return ranked findings."""
+        selected_namespaces = None
+        if namespaces:
+            selected_namespaces = [
+                item.strip()
+                for item in namespaces.split(",")
+                if item.strip()
+            ]
+        return await scan_cluster_payload(
+            namespaces=selected_namespaces,
             tail_lines=tail_lines,
             integration=integration,
             prometheus=prometheus,

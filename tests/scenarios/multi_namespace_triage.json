@@ -1,0 +1,112 @@
+{
+  "nodes": [
+    {
+      "name": "fixture-control-plane",
+      "ready": true,
+      "roles": ["control-plane"],
+      "kubernetes_version": "v1.30.0"
+    }
+  ],
+  "namespaces": [
+    {
+      "name": "platformops-demo",
+      "status": "Active"
+    },
+    {
+      "name": "jenkins",
+      "status": "Active"
+    }
+  ],
+  "pods": [
+    {
+      "name": "checkout-api-7df45b9b9c-2kq4h",
+      "namespace": "platformops-demo",
+      "phase": "Running",
+      "ready": "1/1",
+      "restarts": 0,
+      "node_name": "fixture-control-plane"
+    },
+    {
+      "name": "jenkins-0",
+      "namespace": "jenkins",
+      "phase": "Running",
+      "ready": "0/1",
+      "restarts": 7,
+      "node_name": "fixture-control-plane"
+    }
+  ],
+  "pod_details": [
+    {
+      "name": "checkout-api-7df45b9b9c-2kq4h",
+      "namespace": "platformops-demo",
+      "phase": "Running",
+      "ready": "1/1",
+      "restarts": 0,
+      "node_name": "fixture-control-plane",
+      "service_account": "default",
+      "containers": [
+        {
+          "name": "checkout-api",
+          "ready": true,
+          "restart_count": 0,
+          "state": "running",
+          "reason": null
+        }
+      ],
+      "conditions": {
+        "Ready": "True",
+        "PodScheduled": "True"
+      }
+    },
+    {
+      "name": "jenkins-0",
+      "namespace": "jenkins",
+      "phase": "Running",
+      "ready": "0/1",
+      "restarts": 7,
+      "node_name": "fixture-control-plane",
+      "service_account": "jenkins",
+      "containers": [
+        {
+          "name": "jenkins",
+          "ready": false,
+          "restart_count": 7,
+          "state": "waiting",
+          "reason": "CrashLoopBackOff"
+        }
+      ],
+      "conditions": {
+        "Ready": "False",
+        "PodScheduled": "True"
+      }
+    }
+  ],
+  "events": [
+    {
+      "namespace": "platformops-demo",
+      "involved_object_name": "checkout-api-7df45b9b9c-2kq4h",
+      "involved_object_kind": "Pod",
+      "type": "Normal",
+      "reason": "Started",
+      "message": "Started container checkout-api",
+      "count": 1,
+      "first_timestamp": null,
+      "last_timestamp": null
+    },
+    {
+      "namespace": "jenkins",
+      "involved_object_name": "jenkins-0",
+      "involved_object_kind": "Pod",
+      "type": "Warning",
+      "reason": "BackOff",
+      "message": "Back-off restarting failed container jenkins",
+      "count": 7,
+      "first_timestamp": null,
+      "last_timestamp": null
+    }
+  ],
+  "logs": {
+    "platformops-demo/checkout-api-7df45b9b9c-2kq4h": "checkout-api started\nhealth ok",
+    "jenkins/jenkins-0": "starting jenkins\nplugin initialization failed\nexiting with code 1"
+  }
+}

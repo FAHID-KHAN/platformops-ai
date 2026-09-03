@@ -58,6 +58,12 @@ List cluster nodes:
 platformops k8s nodes
 ```
 
+Scan multiple allowed namespaces and rank what needs attention:
+
+```bash
+platformops scan cluster --allowed-namespaces argocd,jenkins,monitoring
+```
+
 Investigate a namespace with pod status, events, and bounded log excerpts:
 
 ```bash
@@ -107,7 +113,7 @@ platformops --output markdown diagnose service jenkins --namespace jenkins --all
 
 ## What It Can Diagnose
 
-`v0.4.0` includes deterministic Kubernetes, service-path, and Prometheus correlation rules for:
+`v0.5.0` includes deterministic Kubernetes, service-path, cluster triage, and Prometheus correlation rules for:
 
 - CrashLoopBackOff-style restarts
 - ImagePullBackOff and image pull failures
@@ -115,6 +121,7 @@ platformops --output markdown diagnose service jenkins --namespace jenkins --all
 - readiness failures
 - restarted but currently ready pods
 - empty namespaces
+- ranked findings across allowed namespaces
 - policy and provider errors
 - Prometheus target-down correlation
 - Prometheus firing-alert correlation
@@ -165,6 +172,7 @@ Kubernetes investigation and diagnosis:
 platformops k8s investigate --namespace default --allowed-namespaces default
 platformops diagnose k8s --namespace default --allowed-namespaces default
 platformops diagnose service SERVICE_NAME --namespace default --allowed-namespaces default
+platformops scan cluster --allowed-namespaces default,jenkins,monitoring
 ```
 
 Prometheus evidence:
@@ -219,7 +227,7 @@ Then diagnose a specific service:
 platformops diagnose service argocd-server --namespace argocd --allowed-namespaces argocd
 ```
 
-Current scope: commands diagnose one namespace or one service at a time. A future cluster scan command will inspect multiple namespaces and rank findings across the cluster.
+Cluster scans inspect multiple allowed namespaces and rank findings across that selected scope. Single namespace and single service commands are still useful when you already know where to look.
 
 ## MCP Server
 
@@ -291,6 +299,7 @@ Example questions to ask your MCP host:
 
 ```text
 What pods are unhealthy in the jenkins namespace?
+Scan argocd, jenkins, and monitoring and rank what needs attention.
 Diagnose the argocd-server service in the argocd namespace.
 Check whether Prometheus has firing alerts related to monitoring.
 List Kubernetes services in the jenkins namespace.
@@ -310,6 +319,7 @@ Available MCP tools:
 - `investigate_namespace(namespace, tail_lines=50)`
 - `diagnose_namespace(namespace, tail_lines=80)`
 - `diagnose_service_path(name, namespace, tail_lines=80)`
+- `scan_cluster(namespaces=None, tail_lines=80)`
 - `prometheus_query(query)`
 - `prometheus_targets()`
 - `prometheus_alerts()`
@@ -381,12 +391,12 @@ platformops k8s --provider fixture \
 
 ## Project Status
 
-Current release: `v0.4.0 - Service Path Diagnosis`
+Current release: `v0.5.0 - Cluster Triage`
 
 Roadmap:
 
-- `v0.5.0`: Jenkins and ArgoCD read-only delivery investigation
-- `v0.6.0`: orchestrated investigation experiments
+- `v0.6.0`: Jenkins and ArgoCD read-only delivery investigation
+- `v0.7.0`: orchestrated investigation experiments
 - `v1.0.0`: approval-gated remediation
 
 ## Documentation
@@ -396,6 +406,7 @@ Roadmap:
 - [Kubernetes diagnosis runbook](docs/runbooks/kubernetes-diagnosis.md)
 - [Prometheus correlation runbook](docs/runbooks/prometheus-correlation.md)
 - [Service path diagnosis runbook](docs/runbooks/service-diagnosis.md)
+- [Cluster triage runbook](docs/runbooks/cluster-triage.md)
 - [MCP server runbook](docs/runbooks/mcp-server.md)
 - [Roadmap](docs/roadmap.md)
 - [ADR index](docs/adr/README.md)

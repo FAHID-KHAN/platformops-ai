@@ -18,6 +18,7 @@ from platformops.mcp.kubernetes_server import (
     list_namespaces_payload,
     list_pods_payload,
     list_services_payload,
+    scan_cluster_payload,
 )
 from platformops.mcp.prometheus_server import (
     build_prometheus_integration,
@@ -58,6 +59,14 @@ def build_parser() -> argparse.ArgumentParser:
     diagnose_service_parser.add_argument("--tail-lines", type=int, default=80)
     _add_prometheus_args(diagnose_service_parser)
     _add_policy_args(diagnose_service_parser)
+
+    scan = subcommands.add_parser("scan", help="Scan multiple scopes and rank findings")
+    scan_areas = scan.add_subparsers(dest="scan_area", required=True)
+    scan_cluster = scan_areas.add_parser("cluster", help="Scan allowed namespaces and rank findings")
+    _add_k8s_connection_args(scan_cluster)
+    scan_cluster.add_argument("--tail-lines", type=int, default=80)
+    _add_prometheus_args(scan_cluster)
+    _add_policy_args(scan_cluster)
 
     prometheus = subcommands.add_parser("prometheus", help="Read-only Prometheus commands")
     _add_prometheus_args(prometheus)
@@ -138,6 +147,43 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 
 async def _run(args: argparse.Namespace) -> dict[str, Any]:
+    if args.area == "scan":
+        if args.scan_area == "cluster":
+            namespaces = _parse_allowed_namespaces(args)
+            if not namespaces:
+                return {
+                    "cluster_scan": {
+                        "status": "unknown",
+                        "summary": "Cluster scan requires --allowed-namespaces.",
+                        "namespaces": [],
+                        "findings": [],
+                        "recommendations": [
+                            {
+                                "action": "Run with --allowed-namespaces namespace-a,namespace-b",
+                                "risk": "read-only",
+                                "approval_required": False,
+                            }
+                        ],
+                        "limitations": [
+                            "Cluster scan intentionally avoids implicit whole-cluster scans."
+                        ],
+                        "evidence": [],
+                    },
+                    "markdown": (
+                        "# Cluster Scan: unknown\n\n"
+                        "Cluster scan requires --allowed-namespaces.\n"
+                    ),
+                }
+            integration = _build_kubernetes_integration(args)
+            prometheus = _build_prometheus_integration(args)
+            return await scan_cluster_payload(
+                namespaces=namespaces,
+                tail_lines=args.tail_lines,
+                integration=integration,
+                prometheus=prometheus,
+            )
+        raise ValueError(f"unsupported scan area: {args.scan_area}")
+
     if args.area == "diagnose":
         integration = _build_kubernetes_integration(args)
         prometheus = _build_prometheus_integration(args)
@@ -220,10 +266,7 @@ async def _run(args: argparse.Namespace) -> dict[str, Any]:
 
 
 def _build_kubernetes_integration(args: argparse.Namespace) -> KubernetesIntegration:
-    raw_allowed_namespaces = getattr(args, "allowed_namespaces", "")
-    allowed_namespaces = {
-        item.strip() for item in raw_allowed_namespaces.split(",") if item.strip()
-    }
+    allowed_namespaces = set(_parse_allowed_namespaces(args))
     if args.provider == "fake":
         provider = FakeKubernetesProvider()
     elif args.provider == "fixture":
@@ -235,6 +278,15 @@ def _build_kubernetes_integration(args: argparse.Namespace) -> KubernetesIntegra
         provider=provider,
         policy=KubernetesReadOnlyPolicy(allowed_namespaces=allowed_namespaces),
     )
+
+
+def _parse_allowed_namespaces(args: argparse.Namespace) -> list[str]:
+    raw_allowed_namespaces = getattr(args, "allowed_namespaces", "")
+    return [
+        item.strip()
+        for item in raw_allowed_namespaces.split(",")
+        if item.strip()
+    ]
 
 
 def _build_prometheus_integration(args: argparse.Namespace):
@@ -263,6 +315,10 @@ def _print_payload(payload: dict[str, Any], output: str) -> None:
     payload_body = payload.get("payload", {})
     if "diagnosis" in payload:
         _print_diagnosis(payload["diagnosis"])
+        return
+
+    if "cluster_scan" in payload:
+        _print_cluster_scan(payload["cluster_scan"])
         return
 
     if "diagnosis" in payload_body:
@@ -513,6 +569,38 @@ def _print_diagnosis(report: dict[str, Any]) -> None:
         for finding in report["findings"]:
             print(f"- [{finding['severity']}] {finding['title']}")
             print(f"  {finding['summary']}")
+    if report["recommendations"]:
+        print("\nRecommended next actions")
+        for recommendation in report["recommendations"]:
+            print(f"- {recommendation['action']}")
+    if report["limitations"]:
+        print("\nLimitations")
+        for limitation in report["limitations"]:
+            print(f"- {limitation}")
+
+
+def _print_cluster_scan(report: dict[str, Any]) -> None:
+    print(f"Cluster status: {report['status']}")
+    print(report["summary"])
+    if report["findings"]:
+        print("\nRanked findings")
+        for index, finding in enumerate(report["findings"], start=1):
+            print(f"{index}. [{finding['severity']}] {finding['namespace']} - {finding['title']}")
+            print(f"   {finding['summary']}")
+    if report["namespaces"]:
+        print("\nNamespaces")
+        _print_table(
+            ("namespace", "status", "findings", "summary"),
+            [
+                (
+                    namespace["namespace"],
+                    namespace["status"],
+                    str(namespace["finding_count"]),
+                    namespace["summary"],
+                )
+                for namespace in report["namespaces"]
+            ],
+        )
     if report["recommendations"]:
         print("\nRecommended next actions")
         for recommendation in report["recommendations"]:
