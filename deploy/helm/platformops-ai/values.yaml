@@ -1,6 +1,6 @@
 image:
   repository: platformops-ai
-  tag: "0.2.1"
+  tag: "0.3.0"
   pullPolicy: IfNotPresent
 
 provider: api

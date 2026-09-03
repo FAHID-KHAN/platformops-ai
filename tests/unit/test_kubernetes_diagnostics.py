@@ -3,6 +3,8 @@ from pathlib import Path
 from platformops.diagnostics import diagnose_kubernetes_namespace
 from platformops.policies import KubernetesReadOnlyPolicy
 from platformops.providers.kubernetes import FixtureKubernetesProvider, KubernetesIntegration
+from platformops.providers.prometheus import FixturePrometheusProvider
+from platformops.providers.prometheus.integration import PrometheusIntegration
 
 
 def _integration(fixture: str) -> KubernetesIntegration:
@@ -61,3 +63,22 @@ async def test_diagnoses_empty_namespace():
     assert data["status"] == "warning"
     assert data["findings"][0]["title"] == "No pods found"
 
+
+async def test_correlates_prometheus_target_down():
+    prometheus = PrometheusIntegration(
+        FixturePrometheusProvider(Path("tests/scenarios/prometheus_target_down.json"))
+    )
+
+    report = await diagnose_kubernetes_namespace(
+        namespace="jenkins",
+        integration=KubernetesIntegration(
+            FixtureKubernetesProvider(Path("tests/scenarios/healthy_cluster.json")),
+            KubernetesReadOnlyPolicy(),
+        ),
+        prometheus=prometheus,
+    )
+    data = report.to_dict()
+
+    assert data["status"] == "critical"
+    assert any("Prometheus target is down" in finding["title"] for finding in data["findings"])
+    assert any("Prometheus alert is firing" in finding["title"] for finding in data["findings"])

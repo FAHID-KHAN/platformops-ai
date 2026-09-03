@@ -3,6 +3,7 @@ from platformops.mcp.kubernetes_server import (
     get_nodes_payload,
     list_pods_payload,
 )
+from platformops.mcp.prometheus_server import prometheus_alerts_payload, prometheus_targets_payload
 from platformops.policies import KubernetesReadOnlyPolicy
 from platformops.providers.kubernetes import FakeKubernetesProvider, KubernetesIntegration
 
@@ -34,3 +35,12 @@ async def test_mcp_diagnose_payload_helper_returns_report():
 
     assert payload["status"] == "healthy"
     assert payload["findings"]
+
+
+async def test_mcp_prometheus_payload_helpers_return_evidence():
+    targets = await prometheus_targets_payload()
+    alerts = await prometheus_alerts_payload()
+
+    assert targets["source"] == "prometheus"
+    assert "targets" in targets["payload"]
+    assert alerts["source"] == "prometheus"

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.0
+
+- Added read-only Prometheus provider support.
+- Added Prometheus CLI commands for instant queries, scrape targets, and alerts.
+- Added Prometheus MCP payload helpers and tools.
+- Added optional Prometheus correlation to Kubernetes diagnosis.
+- Added fixture Prometheus provider and tests for target-down and alert-firing scenarios.
+
 ## 0.2.1
 
 - Improved the public README and PyPI long description.

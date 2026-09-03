@@ -33,12 +33,12 @@ Required capabilities:
 - Rules for common pod failure modes.
 - CLI and MCP diagnosis entrypoints.
 
-## v0.3.0 - Observability Investigator
+## v0.3.0 - Observability Correlation
 
 - Prometheus provider.
 - Metrics and alerts capabilities.
 - Kubernetes and metrics correlation.
-- PlatformOps self-metrics.
+- Prometheus target and alert correlation in Kubernetes diagnosis.
 
 ## v0.4.0 - Delivery Investigator
 

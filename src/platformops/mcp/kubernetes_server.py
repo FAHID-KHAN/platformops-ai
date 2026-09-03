@@ -23,6 +23,12 @@ from platformops.providers.kubernetes import (
     KubernetesApiProvider,
     KubernetesIntegration,
 )
+from platformops.mcp.prometheus_server import (
+    build_prometheus_integration,
+    prometheus_alerts_payload,
+    prometheus_query_payload,
+    prometheus_targets_payload,
+)
 
 
 def _allowed_namespaces() -> set[str]:
@@ -132,12 +138,14 @@ async def diagnose_namespace_payload(
     namespace: str,
     tail_lines: int = 80,
     integration: KubernetesIntegration | None = None,
+    prometheus=None,
 ) -> dict:
     integration = integration or build_kubernetes_integration()
     report = await diagnose_kubernetes_namespace(
         namespace=namespace,
         tail_lines=tail_lines,
         integration=integration,
+        prometheus=prometheus,
     )
     return report.to_dict()
 
@@ -153,6 +161,7 @@ def create_server():
 
     mcp = FastMCP("platformops-kubernetes")
     integration = build_kubernetes_integration()
+    prometheus = build_prometheus_integration()
 
     @mcp.tool()
     async def get_nodes() -> dict:
@@ -215,7 +224,23 @@ def create_server():
             namespace=namespace,
             tail_lines=tail_lines,
             integration=integration,
+            prometheus=prometheus,
         )
+
+    @mcp.tool()
+    async def prometheus_query(query: str) -> dict:
+        """Run a read-only Prometheus instant query."""
+        return await prometheus_query_payload(query=query, integration=prometheus)
+
+    @mcp.tool()
+    async def prometheus_targets() -> dict:
+        """Return read-only Prometheus scrape target evidence."""
+        return await prometheus_targets_payload(integration=prometheus)
+
+    @mcp.tool()
+    async def prometheus_alerts() -> dict:
+        """Return read-only Prometheus alert evidence."""
+        return await prometheus_alerts_payload(integration=prometheus)
 
     return mcp
 

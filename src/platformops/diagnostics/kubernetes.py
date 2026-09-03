@@ -10,12 +10,14 @@ from platformops.diagnostics.models import (
 from platformops.domain import InvocationContext
 from platformops.integrations.capabilities import K8S_INVESTIGATE_NAMESPACE
 from platformops.providers.kubernetes import KubernetesIntegration
+from platformops.providers.prometheus.integration import PROM_ALERTS, PROM_TARGETS, PrometheusIntegration
 
 
 async def diagnose_kubernetes_namespace(
     namespace: str,
     tail_lines: int = 80,
     integration: KubernetesIntegration | None = None,
+    prometheus: PrometheusIntegration | None = None,
 ) -> DiagnosisReport:
     if integration is None:
         from platformops.mcp.kubernetes_server import build_kubernetes_integration
@@ -44,29 +46,26 @@ async def diagnose_kubernetes_namespace(
     logs = payload.get("log_excerpts", [])
     findings: list[Finding] = []
     recommendations: list[Recommendation] = []
+    evidence_refs: list[EvidenceReference] = [evidence_ref]
 
     if not pods:
-        return DiagnosisReport(
-            status=Severity.WARNING,
-            summary=f"No pods were found in namespace '{namespace}'.",
-            findings=(
-                Finding(
-                    title="No pods found",
-                    severity=Severity.WARNING,
-                    summary=(
-                        "The namespace is reachable but has no pods. The workload may not be "
-                        "deployed, may use another namespace, or may have been removed."
-                    ),
-                    evidence=(evidence_ref,),
+        findings.append(
+            Finding(
+                title="No pods found",
+                severity=Severity.WARNING,
+                summary=(
+                    "The namespace is reachable but has no pods. The workload may not be "
+                    "deployed, may use another namespace, or may have been removed."
                 ),
-            ),
-            recommendations=(
+                evidence=(evidence_ref,),
+            )
+        )
+        recommendations.extend(
+            [
                 Recommendation(action=f"Check deployments in namespace '{namespace}'"),
                 Recommendation(action="Confirm the namespace and release name are correct"),
-            ),
-            evidence=(evidence_ref,),
+            ]
         )
-
     for pod in pods:
         pod_events = [
             event for event in events if event.get("involved_object_name") == pod["name"]
@@ -79,6 +78,15 @@ async def diagnose_kubernetes_namespace(
             + [log.get("error", "") for log in pod_logs]
         )
         findings.extend(_pod_findings(namespace, pod, reasons, evidence_ref))
+
+    if prometheus is not None:
+        prom_findings, prom_recommendations, prom_refs = await _prometheus_findings(
+            prometheus=prometheus,
+            namespace=namespace,
+        )
+        findings.extend(prom_findings)
+        recommendations.extend(prom_recommendations)
+        evidence_refs.extend(prom_refs)
 
     if not findings:
         findings.append(
@@ -102,11 +110,120 @@ async def diagnose_kubernetes_namespace(
         findings=tuple(findings),
         recommendations=tuple(_dedupe_recommendations(recommendations)),
         limitations=(
-            "Diagnosis is deterministic and based only on Kubernetes pod, event, and log evidence.",
-            "No Prometheus, Jenkins, ArgoCD, or source-control correlation is included yet.",
+            "Diagnosis is deterministic and does not use an LLM.",
+            "Jenkins, ArgoCD, and source-control correlation are not included yet.",
         ),
-        evidence=(evidence_ref,),
+        evidence=tuple(evidence_refs),
     )
+
+
+async def _prometheus_findings(
+    prometheus: PrometheusIntegration,
+    namespace: str,
+) -> tuple[list[Finding], list[Recommendation], list[EvidenceReference]]:
+    findings: list[Finding] = []
+    recommendations: list[Recommendation] = []
+    refs: list[EvidenceReference] = []
+
+    targets_envelope = (await prometheus.invoke(PROM_TARGETS, {})).to_dict()
+    alerts_envelope = (await prometheus.invoke(PROM_ALERTS, {})).to_dict()
+
+    if targets_envelope.get("errors"):
+        refs.append(_prom_ref(targets_envelope, "Prometheus targets returned an error"))
+        findings.append(
+            Finding(
+                title="Prometheus targets could not be inspected",
+                severity=Severity.UNKNOWN,
+                summary=targets_envelope["errors"][0]["message"],
+                evidence=(refs[-1],),
+                confidence=1.0,
+            )
+        )
+        recommendations.append(Recommendation(action="Verify Prometheus URL, authentication, and network access"))
+        return findings, recommendations, refs
+
+    target_ref = _prom_ref(targets_envelope, "Prometheus scrape targets")
+    refs.append(target_ref)
+    targets = targets_envelope["payload"].get("targets", [])
+    relevant_targets = [
+        target
+        for target in targets
+        if _matches_namespace(target, namespace) or _matches_text(target.get("job"), namespace)
+    ]
+    down_targets = [target for target in relevant_targets if target.get("health") != "up"]
+    if down_targets:
+        findings.append(
+            Finding(
+                title="Prometheus target is down",
+                severity=Severity.CRITICAL,
+                summary=(
+                    f"Prometheus reports {len(down_targets)} target(s) related to "
+                    f"namespace '{namespace}' as not up."
+                ),
+                evidence=(target_ref,),
+                confidence=0.86,
+            )
+        )
+        recommendations.append(Recommendation(action="Check ServiceMonitor, endpoints, service labels, and target errors"))
+
+    if alerts_envelope.get("errors"):
+        refs.append(_prom_ref(alerts_envelope, "Prometheus alerts returned an error"))
+    else:
+        alert_ref = _prom_ref(alerts_envelope, "Prometheus alerts")
+        refs.append(alert_ref)
+        alerts = alerts_envelope["payload"].get("alerts", [])
+        firing_alerts = [
+            alert
+            for alert in alerts
+            if alert.get("state") == "firing"
+            and (
+                _matches_text(alert.get("name"), namespace)
+                or _matches_text(alert.get("summary"), namespace)
+            )
+        ]
+        if firing_alerts:
+            findings.append(
+                Finding(
+                    title="Prometheus alert is firing",
+                    severity=Severity.WARNING,
+                    summary=(
+                        f"Prometheus has {len(firing_alerts)} firing alert(s) that appear "
+                        f"related to namespace '{namespace}'."
+                    ),
+                    evidence=(alert_ref,),
+                    confidence=0.8,
+                )
+            )
+            recommendations.append(Recommendation(action="Inspect the firing Prometheus alert annotations and runbook"))
+
+    return findings, recommendations, refs
+
+
+def _prom_ref(envelope: dict, note: str) -> EvidenceReference:
+    return EvidenceReference(
+        evidence_id=envelope["evidence_id"],
+        source=envelope["source"],
+        capability=envelope["capability"],
+        note=note,
+    )
+
+
+def _matches_namespace(target: dict, namespace: str) -> bool:
+    haystack = " ".join(
+        str(value)
+        for value in (
+            target.get("scrape_url"),
+            target.get("job"),
+            target.get("instance"),
+            target.get("last_error"),
+        )
+        if value
+    )
+    return namespace.lower() in haystack.lower()
+
+
+def _matches_text(value: str | None, needle: str) -> bool:
+    return bool(value) and needle.lower() in value.lower()
 
 
 def _pod_findings(
@@ -211,6 +328,15 @@ def _recommendations_for(finding: Finding, namespace: str) -> list[Recommendatio
             Recommendation(action="Compare restart timestamps with node restarts, upgrades, or deploys"),
             Recommendation(action="Inspect previous logs if the restart is recent or recurring"),
         ]
+    if "no pods found" in title:
+        return [
+            Recommendation(action=f"Check deployments in namespace '{namespace}'"),
+            Recommendation(action="Confirm the namespace and release name are correct"),
+        ]
+    if "prometheus target is down" in title:
+        return [Recommendation(action="Check ServiceMonitor, endpoints, service labels, and target errors")]
+    if "prometheus alert is firing" in title:
+        return [Recommendation(action="Inspect the firing Prometheus alert annotations and runbook")]
     if "healthy" in title:
         return [Recommendation(action="No Kubernetes remediation is recommended")]
     return [Recommendation(action=f"Collect more Kubernetes evidence from namespace '{namespace}'")]

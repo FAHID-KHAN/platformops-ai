@@ -2,7 +2,7 @@
 
 Read-only, model-agnostic MCP tools and CLI workflows for evidence-grounded platform operations.
 
-PlatformOps AI helps operators investigate Kubernetes workloads without giving an AI model unrestricted infrastructure access. It collects structured evidence from official APIs, applies deterministic diagnosis rules, and returns operator-readable reports with evidence and limitations.
+PlatformOps AI helps operators investigate Kubernetes workloads without giving an AI model unrestricted infrastructure access. It collects structured evidence from official APIs, correlates Kubernetes and Prometheus signals, applies deterministic diagnosis rules, and returns operator-readable reports with evidence and limitations.
 
 The current release focuses on Kubernetes. The architecture is designed to grow into observability, CI/CD, GitOps, source control, and approval-gated remediation.
 
@@ -44,6 +44,15 @@ Generate a deterministic diagnosis report:
 platformops diagnose k8s --namespace jenkins --allowed-namespaces jenkins
 ```
 
+Correlate Kubernetes diagnosis with Prometheus:
+
+```bash
+platformops diagnose k8s \
+  --namespace jenkins \
+  --allowed-namespaces jenkins \
+  --prometheus-url http://prometheus.monitoring.svc:9090
+```
+
 Use JSON output when you want machine-readable evidence:
 
 ```bash
@@ -52,7 +61,7 @@ platformops --output json diagnose k8s --namespace jenkins --allowed-namespaces 
 
 ## What It Can Diagnose
 
-`v0.2.0` includes deterministic Kubernetes diagnosis rules for:
+`v0.3.0` includes deterministic Kubernetes and Prometheus correlation rules for:
 
 - CrashLoopBackOff-style restarts
 - ImagePullBackOff and image pull failures
@@ -61,6 +70,8 @@ platformops --output json diagnose k8s --namespace jenkins --allowed-namespaces 
 - restarted but currently ready pods
 - empty namespaces
 - policy and provider errors
+- Prometheus target-down correlation
+- Prometheus firing-alert correlation
 
 Example output:
 
@@ -101,6 +112,14 @@ Kubernetes investigation and diagnosis:
 ```bash
 platformops k8s investigate --namespace default --allowed-namespaces default
 platformops diagnose k8s --namespace default --allowed-namespaces default
+```
+
+Prometheus evidence:
+
+```bash
+platformops prometheus --prometheus-url http://localhost:9090 query up
+platformops prometheus --prometheus-url http://localhost:9090 targets
+platformops prometheus --prometheus-url http://localhost:9090 alerts
 ```
 
 Connection options:
@@ -165,6 +184,9 @@ PLATFORMOPS_K8S_PROVIDER=api
 PLATFORMOPS_K8S_ALLOWED_NAMESPACES=default,jenkins
 PLATFORMOPS_K8S_CONTEXT=
 PLATFORMOPS_K8S_IN_CLUSTER=false
+PLATFORMOPS_PROMETHEUS_PROVIDER=api
+PLATFORMOPS_PROMETHEUS_URL=http://localhost:9090
+PLATFORMOPS_PROMETHEUS_BEARER_TOKEN=
 ```
 
 Provider modes:
@@ -172,6 +194,8 @@ Provider modes:
 - `api`: use the real Kubernetes API through kubeconfig or in-cluster config
 - `fake`: use deterministic built-in sample data
 - `fixture`: use a local JSON fixture file
+
+Prometheus can be configured with `--prometheus-url`, `PLATFORMOPS_PROMETHEUS_URL`, or fixture/fake provider modes for tests and demos.
 
 ## Security Model
 
@@ -216,11 +240,10 @@ platformops k8s --provider fixture \
 
 ## Project Status
 
-Current release: `v0.2.1 - Kubernetes Diagnosis`
+Current release: `v0.3.0 - Observability Correlation`
 
 Roadmap:
 
-- `v0.3.0`: Prometheus and observability correlation
 - `v0.4.0`: Jenkins and ArgoCD read-only delivery investigation
 - `v0.5.0`: orchestrated investigation experiments
 - `v1.0.0`: approval-gated remediation
@@ -230,6 +253,7 @@ Roadmap:
 - [Documentation index](docs/README.md)
 - [Architecture overview](docs/architecture/overview.md)
 - [Kubernetes diagnosis runbook](docs/runbooks/kubernetes-diagnosis.md)
+- [Prometheus correlation runbook](docs/runbooks/prometheus-correlation.md)
 - [Roadmap](docs/roadmap.md)
 - [ADR index](docs/adr/README.md)
 - [Security policy](SECURITY.md)

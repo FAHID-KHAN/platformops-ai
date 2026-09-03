@@ -1,0 +1,24 @@
+{
+  "query": {
+    "result_type": "vector",
+    "result": []
+  },
+  "targets": [
+    {
+      "scrape_url": "http://jenkins.jenkins.svc:8080/metrics",
+      "health": "down",
+      "job": "jenkins",
+      "instance": "jenkins-0",
+      "last_error": "context deadline exceeded"
+    }
+  ],
+  "alerts": [
+    {
+      "name": "JenkinsTargetDown",
+      "state": "firing",
+      "severity": "critical",
+      "summary": "jenkins target is down"
+    }
+  ]
+}
+

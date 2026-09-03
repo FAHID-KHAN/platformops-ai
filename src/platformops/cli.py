@@ -16,6 +16,12 @@ from platformops.mcp.kubernetes_server import (
     list_namespaces_payload,
     list_pods_payload,
 )
+from platformops.mcp.prometheus_server import (
+    build_prometheus_integration,
+    prometheus_alerts_payload,
+    prometheus_query_payload,
+    prometheus_targets_payload,
+)
 from platformops.policies import KubernetesReadOnlyPolicy
 from platformops.providers.kubernetes import (
     FakeKubernetesProvider,
@@ -39,7 +45,16 @@ def build_parser() -> argparse.ArgumentParser:
     _add_k8s_connection_args(diagnose_k8s)
     diagnose_k8s.add_argument("--namespace", "-n", required=True)
     diagnose_k8s.add_argument("--tail-lines", type=int, default=80)
+    _add_prometheus_args(diagnose_k8s)
     _add_policy_args(diagnose_k8s)
+
+    prometheus = subcommands.add_parser("prometheus", help="Read-only Prometheus commands")
+    _add_prometheus_args(prometheus)
+    prometheus_commands = prometheus.add_subparsers(dest="command", required=True)
+    prom_query = prometheus_commands.add_parser("query", help="Run a Prometheus instant query")
+    prom_query.add_argument("query")
+    prometheus_commands.add_parser("targets", help="List Prometheus scrape targets")
+    prometheus_commands.add_parser("alerts", help="List Prometheus alerts")
 
     k8s = subcommands.add_parser("k8s", help="Read-only Kubernetes investigation commands")
     _add_k8s_connection_args(k8s)
@@ -86,6 +101,12 @@ def _add_k8s_connection_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--fixture", default="tests/scenarios/healthy_cluster.json")
 
 
+def _add_prometheus_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--prometheus-provider", choices=("fake", "fixture", "api"), default=None)
+    parser.add_argument("--prometheus-url", default=None)
+    parser.add_argument("--prometheus-fixture", default=None)
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -99,13 +120,27 @@ async def _run(args: argparse.Namespace) -> dict[str, Any]:
         if args.diagnose_area != "k8s":
             raise ValueError(f"unsupported diagnosis area: {args.diagnose_area}")
         integration = _build_kubernetes_integration(args)
+        prometheus = _build_prometheus_integration(args)
         return {
             "diagnosis": await diagnose_namespace_payload(
                 namespace=args.namespace,
                 tail_lines=args.tail_lines,
                 integration=integration,
+                prometheus=prometheus,
             )
         }
+
+    if args.area == "prometheus":
+        integration = _build_prometheus_integration(args)
+        if integration is None:
+            raise SystemExit("Prometheus is not configured. Set --prometheus-url or use --prometheus-provider fake.")
+        if args.command == "query":
+            return await prometheus_query_payload(args.query, integration)
+        if args.command == "targets":
+            return await prometheus_targets_payload(integration)
+        if args.command == "alerts":
+            return await prometheus_alerts_payload(integration)
+        raise ValueError(f"unsupported prometheus command: {args.command}")
 
     if args.area != "k8s":
         raise ValueError(f"unsupported command area: {args.area}")
@@ -143,8 +178,9 @@ async def _run(args: argparse.Namespace) -> dict[str, Any]:
 
 
 def _build_kubernetes_integration(args: argparse.Namespace) -> KubernetesIntegration:
+    raw_allowed_namespaces = getattr(args, "allowed_namespaces", "")
     allowed_namespaces = {
-        item.strip() for item in args.allowed_namespaces.split(",") if item.strip()
+        item.strip() for item in raw_allowed_namespaces.split(",") if item.strip()
     }
     if args.provider == "fake":
         provider = FakeKubernetesProvider()
@@ -156,6 +192,14 @@ def _build_kubernetes_integration(args: argparse.Namespace) -> KubernetesIntegra
     return KubernetesIntegration(
         provider=provider,
         policy=KubernetesReadOnlyPolicy(allowed_namespaces=allowed_namespaces),
+    )
+
+
+def _build_prometheus_integration(args: argparse.Namespace):
+    return build_prometheus_integration(
+        provider_name=args.prometheus_provider,
+        url=args.prometheus_url,
+        fixture=args.prometheus_fixture,
     )
 
 
@@ -177,6 +221,45 @@ def _print_payload(payload: dict[str, Any], output: str) -> None:
 
     if "diagnosis" in payload_body:
         _print_diagnosis(payload_body["diagnosis"])
+        return
+
+    if "query_result" in payload_body:
+        result = payload_body["query_result"]
+        print(f"Query: {result['query']}")
+        print(f"Type: {result['result_type']}")
+        for item in result["result"]:
+            print(json.dumps(item, sort_keys=True))
+        return
+
+    if "targets" in payload_body:
+        _print_table(
+            ("health", "job", "instance", "scrape_url", "error"),
+            [
+                (
+                    target["health"],
+                    target["job"] or "",
+                    target["instance"] or "",
+                    target["scrape_url"],
+                    target["last_error"] or "",
+                )
+                for target in payload_body["targets"]
+            ],
+        )
+        return
+
+    if "alerts" in payload_body:
+        _print_table(
+            ("state", "name", "severity", "summary"),
+            [
+                (
+                    alert["state"],
+                    alert["name"],
+                    alert["severity"] or "",
+                    alert["summary"] or "",
+                )
+                for alert in payload_body["alerts"]
+            ],
+        )
         return
 
     if "unhealthy_pods" in payload_body:

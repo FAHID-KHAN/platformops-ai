@@ -7,6 +7,8 @@ This folder contains the product documentation for PlatformOps AI.
 - [Architecture overview](architecture/overview.md)
 - [Roadmap](roadmap.md)
 - [Architecture decisions](adr/README.md)
+- [Kubernetes diagnosis](runbooks/kubernetes-diagnosis.md)
+- [Prometheus correlation](runbooks/prometheus-correlation.md)
 
 ## Source Planning Documents
 
@@ -14,4 +16,3 @@ This folder contains the product documentation for PlatformOps AI.
 - [Agentic platform engineering learning project](project/agentic-platform-engineering-learning-project.md)
 
 The source planning documents are preserved for context. The concise architecture and roadmap files are the current implementation guides.
-

@@ -105,3 +105,46 @@ def test_cli_diagnoses_fixture_namespace(capsys):
     assert exit_code == 0
     assert "Status: critical" in output
     assert "crash looping" in output
+
+
+def test_cli_lists_prometheus_targets(capsys):
+    exit_code = main(
+        [
+            "prometheus",
+            "--prometheus-provider",
+            "fixture",
+            "--prometheus-fixture",
+            "tests/scenarios/prometheus_target_down.json",
+            "targets",
+        ]
+    )
+
+    output = capsys.readouterr().out
+
+    assert exit_code == 0
+    assert "jenkins-0" in output
+    assert "down" in output
+
+
+def test_cli_diagnosis_can_use_prometheus_fixture(capsys):
+    exit_code = main(
+        [
+            "diagnose",
+            "k8s",
+            "--provider",
+            "fixture",
+            "--fixture",
+            "tests/scenarios/healthy_cluster.json",
+            "--namespace",
+            "jenkins",
+            "--prometheus-provider",
+            "fixture",
+            "--prometheus-fixture",
+            "tests/scenarios/prometheus_target_down.json",
+        ]
+    )
+
+    output = capsys.readouterr().out
+
+    assert exit_code == 0
+    assert "Prometheus target is down" in output
