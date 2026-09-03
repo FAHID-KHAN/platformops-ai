@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.2
+
+- Fixed CLI placement for `--allowed-namespaces` after Kubernetes subcommands.
+- Fixed namespace investigation readiness detection for multi-container pods.
+- Fixed multi-container pod log collection by selecting a concrete container.
+- Decoded Kubernetes byte log responses before printing CLI output.
+- Added PyPI package metadata and release automation.
+
 ## 0.1.1
 
 - Added the direct `platformops` CLI.

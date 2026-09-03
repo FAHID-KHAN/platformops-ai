@@ -6,6 +6,27 @@ Kubernetes is the first reference integration, not the product boundary. The arc
 
 ## Quick Start
 
+Install the latest release from PyPI:
+
+```bash
+pip install "platformops-ai[kubernetes]"
+```
+
+Then run:
+
+```bash
+platformops k8s nodes
+platformops k8s investigate --namespace jenkins --allowed-namespaces jenkins
+```
+
+For MCP support:
+
+```bash
+pip install "platformops-ai[mcp,kubernetes]"
+```
+
+## Local Development
+
 ```bash
 python -m venv .venv
 source .venv/bin/activate
