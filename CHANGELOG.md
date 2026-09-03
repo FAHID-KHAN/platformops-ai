@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.1
+
+- Added cross-source app investigation with `platformops investigate app`.
+- Added a combined evidence chain across Kubernetes, service-path, Prometheus, ArgoCD, and Jenkins signals.
+- Added MCP `investigate_app` support for AI hosts.
+- Added markdown and JSON app investigation reports.
+- Added tests and docs for app-level investigation.
+
 ## 0.6.0
 
 - Added read-only delivery investigation for ArgoCD applications and Jenkins builds.

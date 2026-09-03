@@ -77,6 +77,7 @@ Scan argocd, jenkins, and monitoring and rank what needs attention.
 Diagnose the jenkins namespace.
 Diagnose the argocd-server service in the argocd namespace.
 Check whether ArgoCD or Jenkins explains the jenkins namespace issue.
+Investigate the jenkins app across Kubernetes, service, Prometheus, ArgoCD, and Jenkins.
 List services and endpoints in the monitoring namespace.
 Check Prometheus targets and alerts.
 ```
@@ -99,6 +100,7 @@ Check Prometheus targets and alerts.
 - `list_argocd_apps(namespace=None)`
 - `list_jenkins_builds(job_name=None, limit=10)`
 - `diagnose_delivery(namespace=None, app_name=None, job_name=None, build_limit=10)`
+- `investigate_app(app, namespace, service_name=None, argocd_app=None, jenkins_job=None, tail_lines=80)`
 - `prometheus_query(query)`
 - `prometheus_targets()`
 - `prometheus_alerts()`
@@ -128,6 +130,18 @@ Check whether ArgoCD or Jenkins explains the jenkins namespace issue.
 ```
 
 Delivery tools are read-only. They list ArgoCD applications, list Jenkins builds, and produce deterministic delivery diagnosis reports.
+
+## App Investigation
+
+Use `investigate_app` when you want the MCP host to combine Kubernetes, service-path, Prometheus, ArgoCD, and Jenkins evidence into one ranked narrative.
+
+Example prompt:
+
+```text
+Investigate the jenkins app in the jenkins namespace and tell me the most likely explanation.
+```
+
+Pass `service_name`, `argocd_app`, or `jenkins_job` when those names differ from the app name.
 
 ## Security Notes
 

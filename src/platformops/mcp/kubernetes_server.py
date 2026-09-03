@@ -40,6 +40,7 @@ from platformops.mcp.delivery_server import (
     list_argocd_apps_payload,
     list_jenkins_builds_payload,
 )
+from platformops.mcp.application_server import investigate_app_payload
 
 
 def _allowed_namespaces() -> set[str]:
@@ -398,6 +399,28 @@ def create_server():
             job_name=job_name,
             build_limit=build_limit,
             integration=delivery,
+        )
+
+    @mcp.tool()
+    async def investigate_app(
+        app: str,
+        namespace: str,
+        service_name: str | None = None,
+        argocd_app: str | None = None,
+        jenkins_job: str | None = None,
+        tail_lines: int = 80,
+    ) -> dict:
+        """Investigate an app across Kubernetes, service, Prometheus, ArgoCD, and Jenkins."""
+        return await investigate_app_payload(
+            app=app,
+            namespace=namespace,
+            service_name=service_name,
+            argocd_app=argocd_app,
+            jenkins_job=jenkins_job,
+            tail_lines=tail_lines,
+            kubernetes=integration,
+            prometheus=prometheus,
+            delivery=delivery,
         )
 
     @mcp.tool()

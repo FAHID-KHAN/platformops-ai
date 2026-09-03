@@ -3,6 +3,7 @@ from platformops.mcp.delivery_server import (
     list_argocd_apps_payload,
     list_jenkins_builds_payload,
 )
+from platformops.mcp.application_server import investigate_app_payload
 from platformops.mcp.kubernetes_server import (
     diagnose_namespace_payload,
     diagnose_service_payload,
@@ -105,3 +106,23 @@ async def test_mcp_delivery_payload_helpers_return_evidence():
     assert apps["payload"]["argocd_apps"][0]["name"] == "jenkins"
     assert builds["payload"]["jenkins_builds"][0]["result"] == "FAILURE"
     assert diagnosis["diagnosis"]["status"] == "critical"
+
+
+async def test_mcp_app_investigation_payload_returns_narrative():
+    integration = KubernetesIntegration(FakeKubernetesProvider())
+    delivery = DeliveryIntegration(FakeDeliveryProvider())
+
+    payload = await investigate_app_payload(
+        app="jenkins",
+        namespace="jenkins",
+        jenkins_job="platform/jenkins",
+        kubernetes=integration,
+        delivery=delivery,
+    )
+
+    report = payload["app_investigation"]
+
+    assert report["app"] == "jenkins"
+    assert report["status"] == "critical"
+    assert report["evidence_chain"]
+    assert "markdown" in payload

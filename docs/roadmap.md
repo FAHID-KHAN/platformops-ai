@@ -60,11 +60,11 @@ Required capabilities:
 - Correlate deployments, revisions, pipeline failures, and Kubernetes symptoms.
 - Delivery CLI, MCP tools, fixture providers, and deterministic diagnosis reports.
 
-## v0.6.x
+## v0.6.1 - Cross-Source App Investigation
 
-- ArgoCD application resource details and sync history.
-- Jenkins stage-level build evidence.
-- Stronger ownership correlation between Kubernetes workloads and delivery systems.
+- App-level investigation across Kubernetes, service-path, Prometheus, ArgoCD, and Jenkins.
+- Ranked evidence chain and likely explanation.
+- CLI, MCP, JSON, and markdown outputs for app investigation.
 
 ## v0.7.0 - Integration SDK Preview
 

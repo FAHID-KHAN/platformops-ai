@@ -1,6 +1,6 @@
 # Current Setup
 
-This is the `v0.6.0` architecture in plain terms.
+This is the `v0.6.1` architecture in plain terms.
 
 PlatformOps AI has two main entrypoints:
 
@@ -118,6 +118,7 @@ flowchart LR
     argocd[list_argocd_apps]
     jenkins[list_jenkins_builds]
     delivery[diagnose_delivery]
+    appInvestigation[investigate_app]
     prometheus[prometheus_query / targets / alerts]
 
     evidence[Structured evidence]
@@ -138,10 +139,12 @@ flowchart LR
     evidence --> svcdiag
     evidence --> scan
     evidence --> delivery
+    evidence --> appInvestigation
     nsdiag --> diagnosis
     svcdiag --> diagnosis
     scan --> diagnosis
     delivery --> diagnosis
+    appInvestigation --> diagnosis
 ```
 
 ## Safety Boundaries
@@ -185,14 +188,13 @@ flowchart TD
 
 ## What To Build Next
 
-The strongest next phase is `v0.6.x - Delivery Correlation`.
+The strongest next phase is `v0.7.0 - Integration SDK Preview`.
 
-Goal: make ownership and timeline correlation stronger.
+Goal: make it easier for contributors to add new read-only systems without copying provider boilerplate.
 
 The useful operator questions become:
 
-- Did ArgoCD sync fail before this pod became unhealthy?
-- Which app owns this workload?
-- Is the application degraded, progressing, or out of sync?
-- Did a Jenkins pipeline fail around the same time?
-- Which recent delivery event should the operator inspect first?
+- What interface must a new integration implement?
+- How do we contract-test every provider?
+- How does a new provider expose evidence without breaking MCP clients?
+- How do community integrations declare capabilities and risk level?

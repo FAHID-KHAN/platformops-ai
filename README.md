@@ -110,6 +110,14 @@ platformops delivery jenkins builds --job platform/jenkins
 platformops diagnose delivery --namespace jenkins --job platform/jenkins
 ```
 
+Investigate one app across Kubernetes, service-path, Prometheus, ArgoCD, and Jenkins:
+
+```bash
+platformops investigate app jenkins \
+  --namespace jenkins \
+  --job platform/jenkins
+```
+
 Use JSON output when you want machine-readable evidence:
 
 ```bash
@@ -124,7 +132,7 @@ platformops --output markdown diagnose service jenkins --namespace jenkins --all
 
 ## What It Can Diagnose
 
-`v0.6.0` includes deterministic Kubernetes, service-path, cluster triage, Prometheus correlation, and delivery rules for:
+`v0.6.1` includes deterministic Kubernetes, service-path, cluster triage, Prometheus correlation, delivery, and app investigation rules for:
 
 - CrashLoopBackOff-style restarts
 - ImagePullBackOff and image pull failures
@@ -140,6 +148,7 @@ platformops --output markdown diagnose service jenkins --namespace jenkins --all
 - Ingress routes attached to a service
 - ArgoCD degraded, missing, or out-of-sync applications
 - failed, unstable, aborted, or running Jenkins builds
+- cross-source app evidence chains and likely explanations
 
 Example output:
 
@@ -204,6 +213,7 @@ platformops delivery argocd apps --namespace jenkins
 platformops delivery jenkins builds
 platformops delivery jenkins builds --job platform/jenkins --limit 5
 platformops diagnose delivery --namespace jenkins --job platform/jenkins
+platformops investigate app jenkins --namespace jenkins --job platform/jenkins
 ```
 
 Connection options:
@@ -332,6 +342,7 @@ What pods are unhealthy in the jenkins namespace?
 Scan argocd, jenkins, and monitoring and rank what needs attention.
 Diagnose the argocd-server service in the argocd namespace.
 Check whether ArgoCD or Jenkins explains the jenkins namespace issue.
+Investigate the jenkins app across Kubernetes, service, Prometheus, ArgoCD, and Jenkins.
 Check whether Prometheus has firing alerts related to monitoring.
 List Kubernetes services in the jenkins namespace.
 ```
@@ -354,6 +365,7 @@ Available MCP tools:
 - `list_argocd_apps(namespace=None)`
 - `list_jenkins_builds(job_name=None, limit=10)`
 - `diagnose_delivery(namespace=None, app_name=None, job_name=None, build_limit=10)`
+- `investigate_app(app, namespace, service_name=None, argocd_app=None, jenkins_job=None, tail_lines=80)`
 - `prometheus_query(query)`
 - `prometheus_targets()`
 - `prometheus_alerts()`
@@ -434,7 +446,7 @@ platformops k8s --provider fixture \
 
 ## Project Status
 
-Current release: `v0.6.0 - Delivery Investigator`
+Current release: `v0.6.1 - Cross-Source App Investigation`
 
 Roadmap:
 
@@ -451,6 +463,7 @@ Roadmap:
 - [Service path diagnosis runbook](docs/runbooks/service-diagnosis.md)
 - [Cluster triage runbook](docs/runbooks/cluster-triage.md)
 - [Delivery investigation runbook](docs/runbooks/delivery-investigation.md)
+- [App investigation runbook](docs/runbooks/app-investigation.md)
 - [MCP server runbook](docs/runbooks/mcp-server.md)
 - [Roadmap](docs/roadmap.md)
 - [ADR index](docs/adr/README.md)

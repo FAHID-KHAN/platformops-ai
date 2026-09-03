@@ -262,3 +262,35 @@ def test_cli_diagnoses_delivery(capsys):
     assert "Status: critical" in output
     assert "ArgoCD app jenkins is Degraded" in output
     assert "ended with FAILURE" in output
+
+
+def test_cli_investigates_app_across_sources(capsys):
+    exit_code = main(
+        [
+            "investigate",
+            "app",
+            "jenkins",
+            "--provider",
+            "fixture",
+            "--fixture",
+            "tests/scenarios/multi_namespace_triage.json",
+            "--allowed-namespaces",
+            "jenkins",
+            "--delivery-provider",
+            "fixture",
+            "--delivery-fixture",
+            "tests/scenarios/delivery_unhealthy.json",
+            "--namespace",
+            "jenkins",
+            "--job",
+            "platform/jenkins",
+        ]
+    )
+
+    output = capsys.readouterr().out
+
+    assert exit_code == 0
+    assert "Application status: critical" in output
+    assert "Likely explanation" in output
+    assert "Delivery evidence is correlated" in output
+    assert "ArgoCD app jenkins is Degraded" in output

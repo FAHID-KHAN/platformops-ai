@@ -12,6 +12,7 @@ from platformops.mcp.delivery_server import (
     list_argocd_apps_payload,
     list_jenkins_builds_payload,
 )
+from platformops.mcp.application_server import investigate_app_payload
 from platformops.mcp.kubernetes_server import (
     diagnose_namespace_payload,
     get_endpoints_payload,
@@ -79,6 +80,20 @@ def build_parser() -> argparse.ArgumentParser:
     scan_cluster.add_argument("--tail-lines", type=int, default=80)
     _add_prometheus_args(scan_cluster)
     _add_policy_args(scan_cluster)
+
+    investigate = subcommands.add_parser("investigate", help="Run higher-level investigations")
+    investigate_areas = investigate.add_subparsers(dest="investigate_area", required=True)
+    investigate_app = investigate_areas.add_parser("app", help="Investigate an app across platform sources")
+    investigate_app.add_argument("app")
+    investigate_app.add_argument("--namespace", "-n", required=True)
+    investigate_app.add_argument("--service", dest="service_name", default=None)
+    investigate_app.add_argument("--argocd-app", default=None)
+    investigate_app.add_argument("--job", dest="jenkins_job", default=None)
+    investigate_app.add_argument("--tail-lines", type=int, default=80)
+    _add_k8s_connection_args(investigate_app)
+    _add_policy_args(investigate_app)
+    _add_prometheus_args(investigate_app)
+    _add_delivery_args(investigate_app)
 
     prometheus = subcommands.add_parser("prometheus", help="Read-only Prometheus commands")
     _add_prometheus_args(prometheus)
@@ -213,6 +228,21 @@ async def _run(args: argparse.Namespace) -> dict[str, Any]:
                 prometheus=prometheus,
             )
         raise ValueError(f"unsupported scan area: {args.scan_area}")
+
+    if args.area == "investigate":
+        if args.investigate_area == "app":
+            return await investigate_app_payload(
+                app=args.app,
+                namespace=args.namespace,
+                service_name=args.service_name,
+                argocd_app=args.argocd_app,
+                jenkins_job=args.jenkins_job,
+                tail_lines=args.tail_lines,
+                kubernetes=_build_kubernetes_integration(args),
+                prometheus=_build_prometheus_integration(args),
+                delivery=_build_delivery_integration(args),
+            )
+        raise ValueError(f"unsupported investigation area: {args.investigate_area}")
 
     if args.area == "diagnose":
         if args.diagnose_area == "k8s":
@@ -382,6 +412,10 @@ def _print_payload(payload: dict[str, Any], output: str) -> None:
 
     if "cluster_scan" in payload:
         _print_cluster_scan(payload["cluster_scan"])
+        return
+
+    if "app_investigation" in payload:
+        _print_app_investigation(payload["app_investigation"])
         return
 
     if "diagnosis" in payload_body:
@@ -698,6 +732,26 @@ def _print_cluster_scan(report: dict[str, Any]) -> None:
         )
     if report["recommendations"]:
         print("\nRecommended next actions")
+        for recommendation in report["recommendations"]:
+            print(f"- {recommendation['action']}")
+    if report["limitations"]:
+        print("\nLimitations")
+        for limitation in report["limitations"]:
+            print(f"- {limitation}")
+
+
+def _print_app_investigation(report: dict[str, Any]) -> None:
+    print(f"Application status: {report['status']}")
+    print(report["summary"])
+    print("\nLikely explanation")
+    print(report["likely_explanation"])
+    if report["evidence_chain"]:
+        print("\nEvidence chain")
+        for index, item in enumerate(report["evidence_chain"], start=1):
+            print(f"{index}. [{item['severity']}] {item['source']} - {item['title']}")
+            print(f"   {item['summary']}")
+    if report["recommendations"]:
+        print("\nRecommended next checks")
         for recommendation in report["recommendations"]:
             print(f"- {recommendation['action']}")
     if report["limitations"]:
