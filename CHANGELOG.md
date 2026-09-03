@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.1
+
+- Improved the public README and PyPI long description.
+- Added clearer install, CLI, MCP, configuration, and safety guidance for new users.
+
 ## 0.2.0
 
 - Added deterministic Kubernetes diagnosis reports.

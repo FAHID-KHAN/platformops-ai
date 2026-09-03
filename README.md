@@ -216,7 +216,7 @@ platformops k8s --provider fixture \
 
 ## Project Status
 
-Current release: `v0.2.0 - Kubernetes Diagnosis`
+Current release: `v0.2.1 - Kubernetes Diagnosis`
 
 Roadmap:
 
