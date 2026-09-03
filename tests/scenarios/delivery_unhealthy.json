@@ -1,0 +1,46 @@
+{
+  "argocd_apps": [
+    {
+      "name": "jenkins",
+      "namespace": "jenkins",
+      "project": "platform",
+      "sync_status": "OutOfSync",
+      "health_status": "Degraded",
+      "repo_url": "https://github.com/example/platform",
+      "revision": "def5678",
+      "target_revision": "main",
+      "conditions": ["Deployment rollout has not completed"]
+    },
+    {
+      "name": "checkout-api",
+      "namespace": "platformops-demo",
+      "project": "default",
+      "sync_status": "Synced",
+      "health_status": "Healthy",
+      "repo_url": "https://github.com/example/checkout-api",
+      "revision": "abc1234",
+      "target_revision": "main",
+      "conditions": []
+    }
+  ],
+  "jenkins_builds": [
+    {
+      "job_name": "platform/jenkins",
+      "number": 42,
+      "result": "FAILURE",
+      "building": false,
+      "timestamp": "2026-09-04T10:00:00Z",
+      "duration_ms": 120000,
+      "url": "https://jenkins.example/job/platform/job/jenkins/42/"
+    },
+    {
+      "job_name": "platform/checkout-api",
+      "number": 108,
+      "result": "SUCCESS",
+      "building": false,
+      "timestamp": "2026-09-04T09:45:00Z",
+      "duration_ms": 90000,
+      "url": "https://jenkins.example/job/platform/job/checkout-api/108/"
+    }
+  ]
+}

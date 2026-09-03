@@ -2,12 +2,13 @@
 
 # PlatformOps AI
 
-**Read-only AI operations tooling for Kubernetes, Prometheus, and MCP.**
+**Read-only AI operations tooling for Kubernetes, Prometheus, ArgoCD, Jenkins, and MCP.**
 
 [![PyPI](https://img.shields.io/pypi/v/platformops-ai?label=pypi)](https://pypi.org/project/platformops-ai/)
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue)
 ![Kubernetes](https://img.shields.io/badge/kubernetes-read--only-326ce5)
 ![Prometheus](https://img.shields.io/badge/prometheus-correlation-e6522c)
+![Delivery](https://img.shields.io/badge/delivery-ArgoCD%20%2B%20Jenkins-1f883d)
 ![MCP](https://img.shields.io/badge/MCP-tools-6f42c1)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
 
@@ -26,9 +27,9 @@ PlatformOps AI collects structured platform evidence from official APIs, applies
 
 ## Why PlatformOps AI
 
-PlatformOps AI helps operators investigate Kubernetes workloads without giving an AI model unrestricted infrastructure access. It can inspect namespaces, pods, events, logs, Services, Endpoints, Ingresses, and Prometheus signals, then return operator-readable reports with evidence and limitations.
+PlatformOps AI helps operators investigate platform workloads without giving an AI model unrestricted infrastructure access. It can inspect namespaces, pods, events, logs, Services, Endpoints, Ingresses, Prometheus signals, ArgoCD applications, and Jenkins builds, then return operator-readable reports with evidence and limitations.
 
-The current release focuses on read-only Kubernetes and Prometheus investigation. The architecture is designed to grow into CI/CD, GitOps, source control, controlled orchestration, and approval-gated remediation.
+The current release focuses on read-only Kubernetes, Prometheus, and delivery investigation. The architecture is designed to grow into source control, controlled orchestration, and approval-gated remediation.
 
 Jenkins appears in examples because it is a familiar platform workload, but PlatformOps AI is not Jenkins-specific. It can inspect any Kubernetes namespace or service that your kubeconfig can read and that you include in the namespace allowlist.
 
@@ -101,6 +102,14 @@ platformops diagnose k8s \
   --prometheus-url http://prometheus.monitoring.svc:9090
 ```
 
+Check delivery health from ArgoCD and Jenkins:
+
+```bash
+platformops delivery argocd apps --namespace jenkins
+platformops delivery jenkins builds --job platform/jenkins
+platformops diagnose delivery --namespace jenkins --job platform/jenkins
+```
+
 Use JSON output when you want machine-readable evidence:
 
 ```bash
@@ -115,7 +124,7 @@ platformops --output markdown diagnose service jenkins --namespace jenkins --all
 
 ## What It Can Diagnose
 
-`v0.5.0` includes deterministic Kubernetes, service-path, cluster triage, and Prometheus correlation rules for:
+`v0.6.0` includes deterministic Kubernetes, service-path, cluster triage, Prometheus correlation, and delivery rules for:
 
 - CrashLoopBackOff-style restarts
 - ImagePullBackOff and image pull failures
@@ -129,6 +138,8 @@ platformops --output markdown diagnose service jenkins --namespace jenkins --all
 - Prometheus firing-alert correlation
 - Services with missing ready endpoints
 - Ingress routes attached to a service
+- ArgoCD degraded, missing, or out-of-sync applications
+- failed, unstable, aborted, or running Jenkins builds
 
 Example output:
 
@@ -183,6 +194,16 @@ Prometheus evidence:
 platformops prometheus --prometheus-url http://localhost:9090 query up
 platformops prometheus --prometheus-url http://localhost:9090 targets
 platformops prometheus --prometheus-url http://localhost:9090 alerts
+```
+
+Delivery evidence:
+
+```bash
+platformops delivery argocd apps
+platformops delivery argocd apps --namespace jenkins
+platformops delivery jenkins builds
+platformops delivery jenkins builds --job platform/jenkins --limit 5
+platformops diagnose delivery --namespace jenkins --job platform/jenkins
 ```
 
 Connection options:
@@ -245,7 +266,7 @@ The MCP server is for AI applications that support the Model Context Protocol. P
 User
   -> MCP host and selected LLM
   -> PlatformOps MCP server
-  -> Kubernetes API and optional Prometheus API
+  -> Kubernetes, Prometheus, ArgoCD, and Jenkins APIs
 ```
 
 Example MCP client configuration:
@@ -273,7 +294,8 @@ Use fake mode when you want to test tool discovery without a cluster:
       "command": "platformops-mcp-k8s",
       "env": {
         "PLATFORMOPS_K8S_PROVIDER": "fake",
-        "PLATFORMOPS_PROMETHEUS_PROVIDER": "fake"
+        "PLATFORMOPS_PROMETHEUS_PROVIDER": "fake",
+        "PLATFORMOPS_DELIVERY_PROVIDER": "fake"
       }
     }
   }
@@ -290,7 +312,13 @@ Use API mode for a real cluster. The MCP server uses the kubeconfig or service a
       "env": {
         "PLATFORMOPS_K8S_PROVIDER": "api",
         "PLATFORMOPS_K8S_ALLOWED_NAMESPACES": "argocd,jenkins,monitoring",
-        "PLATFORMOPS_PROMETHEUS_URL": "http://localhost:9090"
+        "PLATFORMOPS_PROMETHEUS_URL": "http://localhost:9090",
+        "PLATFORMOPS_DELIVERY_PROVIDER": "api",
+        "PLATFORMOPS_ARGOCD_URL": "https://argocd.example.com",
+        "PLATFORMOPS_ARGOCD_TOKEN": "...",
+        "PLATFORMOPS_JENKINS_URL": "https://jenkins.example.com",
+        "PLATFORMOPS_JENKINS_USER": "...",
+        "PLATFORMOPS_JENKINS_TOKEN": "..."
       }
     }
   }
@@ -303,6 +331,7 @@ Example questions to ask your MCP host:
 What pods are unhealthy in the jenkins namespace?
 Scan argocd, jenkins, and monitoring and rank what needs attention.
 Diagnose the argocd-server service in the argocd namespace.
+Check whether ArgoCD or Jenkins explains the jenkins namespace issue.
 Check whether Prometheus has firing alerts related to monitoring.
 List Kubernetes services in the jenkins namespace.
 ```
@@ -322,6 +351,9 @@ Available MCP tools:
 - `diagnose_namespace(namespace, tail_lines=80)`
 - `diagnose_service_path(name, namespace, tail_lines=80)`
 - `scan_cluster(namespaces=None, tail_lines=80)`
+- `list_argocd_apps(namespace=None)`
+- `list_jenkins_builds(job_name=None, limit=10)`
+- `diagnose_delivery(namespace=None, app_name=None, job_name=None, build_limit=10)`
 - `prometheus_query(query)`
 - `prometheus_targets()`
 - `prometheus_alerts()`
@@ -340,6 +372,12 @@ PLATFORMOPS_K8S_IN_CLUSTER=false
 PLATFORMOPS_PROMETHEUS_PROVIDER=api
 PLATFORMOPS_PROMETHEUS_URL=http://localhost:9090
 PLATFORMOPS_PROMETHEUS_BEARER_TOKEN=
+PLATFORMOPS_DELIVERY_PROVIDER=api
+PLATFORMOPS_ARGOCD_URL=https://argocd.example.com
+PLATFORMOPS_ARGOCD_TOKEN=
+PLATFORMOPS_JENKINS_URL=https://jenkins.example.com
+PLATFORMOPS_JENKINS_USER=
+PLATFORMOPS_JENKINS_TOKEN=
 ```
 
 Provider modes:
@@ -349,6 +387,8 @@ Provider modes:
 - `fixture`: use a local JSON fixture file
 
 Prometheus can be configured with `--prometheus-url`, `PLATFORMOPS_PROMETHEUS_URL`, or fixture/fake provider modes for tests and demos.
+
+Delivery can be configured with `--delivery-provider fake|fixture|api`, `--delivery-fixture`, or ArgoCD/Jenkins environment variables.
 
 ## Security Model
 
@@ -364,6 +404,7 @@ It does not support:
 It does support:
 
 - official Kubernetes API reads
+- official ArgoCD, Jenkins, and Prometheus API reads
 - namespace allowlists
 - bounded log reads
 - structured evidence envelopes
@@ -393,11 +434,10 @@ platformops k8s --provider fixture \
 
 ## Project Status
 
-Current release: `v0.5.0 - Cluster Triage`
+Current release: `v0.6.0 - Delivery Investigator`
 
 Roadmap:
 
-- `v0.6.0`: Jenkins and ArgoCD read-only delivery investigation
 - `v0.7.0`: orchestrated investigation experiments
 - `v1.0.0`: approval-gated remediation
 
@@ -410,6 +450,7 @@ Roadmap:
 - [Prometheus correlation runbook](docs/runbooks/prometheus-correlation.md)
 - [Service path diagnosis runbook](docs/runbooks/service-diagnosis.md)
 - [Cluster triage runbook](docs/runbooks/cluster-triage.md)
+- [Delivery investigation runbook](docs/runbooks/delivery-investigation.md)
 - [MCP server runbook](docs/runbooks/mcp-server.md)
 - [Roadmap](docs/roadmap.md)
 - [ADR index](docs/adr/README.md)

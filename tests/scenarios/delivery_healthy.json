@@ -1,0 +1,26 @@
+{
+  "argocd_apps": [
+    {
+      "name": "checkout-api",
+      "namespace": "platformops-demo",
+      "project": "default",
+      "sync_status": "Synced",
+      "health_status": "Healthy",
+      "repo_url": "https://github.com/example/checkout-api",
+      "revision": "abc1234",
+      "target_revision": "main",
+      "conditions": []
+    }
+  ],
+  "jenkins_builds": [
+    {
+      "job_name": "platform/checkout-api",
+      "number": 108,
+      "result": "SUCCESS",
+      "building": false,
+      "timestamp": "2026-09-04T09:45:00Z",
+      "duration_ms": 90000,
+      "url": "https://jenkins.example/job/platform/job/checkout-api/108/"
+    }
+  ]
+}

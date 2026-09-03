@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.6.0
+
+- Added read-only delivery investigation for ArgoCD applications and Jenkins builds.
+- Added `platformops delivery argocd apps`.
+- Added `platformops delivery jenkins builds`.
+- Added `platformops diagnose delivery` for deterministic delivery health reports.
+- Added MCP helpers/tools for ArgoCD apps, Jenkins builds, and delivery diagnosis.
+- Added fake and fixture delivery providers with tests and docs.
+
 ## 0.5.0
 
 - Added cluster-level triage with `platformops scan cluster`.

@@ -8,7 +8,7 @@ The MCP server does not run an LLM by itself. It exposes read-only tools; your M
 User
   -> MCP host and selected LLM
   -> PlatformOps MCP server
-  -> Kubernetes API and optional Prometheus API
+  -> Kubernetes, Prometheus, ArgoCD, and Jenkins APIs
 ```
 
 ## Install
@@ -36,7 +36,8 @@ Use fake mode to verify that your MCP host can discover and call tools without a
       "command": "platformops-mcp-k8s",
       "env": {
         "PLATFORMOPS_K8S_PROVIDER": "fake",
-        "PLATFORMOPS_PROMETHEUS_PROVIDER": "fake"
+        "PLATFORMOPS_PROMETHEUS_PROVIDER": "fake",
+        "PLATFORMOPS_DELIVERY_PROVIDER": "fake"
       }
     }
   }
@@ -55,7 +56,13 @@ Use API mode when the MCP server process has kubeconfig access or runs inside a 
       "env": {
         "PLATFORMOPS_K8S_PROVIDER": "api",
         "PLATFORMOPS_K8S_ALLOWED_NAMESPACES": "argocd,jenkins,monitoring",
-        "PLATFORMOPS_PROMETHEUS_URL": "http://localhost:9090"
+        "PLATFORMOPS_PROMETHEUS_URL": "http://localhost:9090",
+        "PLATFORMOPS_DELIVERY_PROVIDER": "api",
+        "PLATFORMOPS_ARGOCD_URL": "https://argocd.example.com",
+        "PLATFORMOPS_ARGOCD_TOKEN": "...",
+        "PLATFORMOPS_JENKINS_URL": "https://jenkins.example.com",
+        "PLATFORMOPS_JENKINS_USER": "...",
+        "PLATFORMOPS_JENKINS_TOKEN": "..."
       }
     }
   }
@@ -69,6 +76,7 @@ What nodes and namespaces can PlatformOps see?
 Scan argocd, jenkins, and monitoring and rank what needs attention.
 Diagnose the jenkins namespace.
 Diagnose the argocd-server service in the argocd namespace.
+Check whether ArgoCD or Jenkins explains the jenkins namespace issue.
 List services and endpoints in the monitoring namespace.
 Check Prometheus targets and alerts.
 ```
@@ -88,6 +96,9 @@ Check Prometheus targets and alerts.
 - `diagnose_namespace(namespace, tail_lines=80)`
 - `diagnose_service_path(name, namespace, tail_lines=80)`
 - `scan_cluster(namespaces=None, tail_lines=80)`
+- `list_argocd_apps(namespace=None)`
+- `list_jenkins_builds(job_name=None, limit=10)`
+- `diagnose_delivery(namespace=None, app_name=None, job_name=None, build_limit=10)`
 - `prometheus_query(query)`
 - `prometheus_targets()`
 - `prometheus_alerts()`
@@ -105,6 +116,18 @@ Scan argocd, jenkins, and monitoring and give me the highest-risk findings first
 ```
 
 The tool remains read-only and only returns evidence from namespaces allowed by policy.
+
+## Delivery Investigation
+
+Use delivery tools when you want the MCP host to inspect ArgoCD and Jenkins alongside Kubernetes findings.
+
+Example prompt:
+
+```text
+Check whether ArgoCD or Jenkins explains the jenkins namespace issue.
+```
+
+Delivery tools are read-only. They list ArgoCD applications, list Jenkins builds, and produce deterministic delivery diagnosis reports.
 
 ## Security Notes
 

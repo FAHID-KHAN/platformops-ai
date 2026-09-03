@@ -9,3 +9,7 @@ K8S_DIAGNOSE_NAMESPACE = "kubernetes.diagnose_namespace"
 K8S_LIST_SERVICES = "kubernetes.list_services"
 K8S_GET_ENDPOINTS = "kubernetes.get_endpoints"
 K8S_LIST_INGRESSES = "kubernetes.list_ingresses"
+
+DELIVERY_LIST_ARGOCD_APPS = "delivery.list_argocd_apps"
+DELIVERY_LIST_JENKINS_BUILDS = "delivery.list_jenkins_builds"
+DELIVERY_DIAGNOSE = "delivery.diagnose"

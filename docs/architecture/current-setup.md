@@ -1,6 +1,6 @@
 # Current Setup
 
-This is the `v0.5.0` architecture in plain terms.
+This is the `v0.6.0` architecture in plain terms.
 
 PlatformOps AI has two main entrypoints:
 
@@ -24,6 +24,7 @@ flowchart TD
 
     k8sProvider[Kubernetes provider]
     promProvider[Prometheus provider]
+    deliveryProvider[Delivery provider]
 
     fake[Fake provider]
     fixture[Fixture provider]
@@ -40,6 +41,7 @@ flowchart TD
     app --> policy
     policy --> k8sProvider
     policy --> promProvider
+    app --> deliveryProvider
 
     k8sProvider --> fake
     k8sProvider --> fixture
@@ -47,12 +49,18 @@ flowchart TD
     promProvider --> fake
     promProvider --> fixture
     promProvider --> api
+    deliveryProvider --> fake
+    deliveryProvider --> fixture
+    deliveryProvider --> api
 
     api --> kube
     api --> prom
+    api --> argocd[ArgoCD API]
+    api --> jenkins[Jenkins API]
 
     k8sProvider --> evidence
     promProvider --> evidence
+    deliveryProvider --> evidence
     evidence --> app
     app --> cli
     app --> mcp
@@ -107,6 +115,9 @@ flowchart LR
     nsdiag[diagnose_namespace]
     svcdiag[diagnose_service_path]
     scan[scan_cluster]
+    argocd[list_argocd_apps]
+    jenkins[list_jenkins_builds]
+    delivery[diagnose_delivery]
     prometheus[prometheus_query / targets / alerts]
 
     evidence[Structured evidence]
@@ -121,12 +132,16 @@ flowchart LR
     endpoints --> evidence
     ingresses --> evidence
     prometheus --> evidence
+    argocd --> evidence
+    jenkins --> evidence
     evidence --> nsdiag
     evidence --> svcdiag
     evidence --> scan
+    evidence --> delivery
     nsdiag --> diagnosis
     svcdiag --> diagnosis
     scan --> diagnosis
+    delivery --> diagnosis
 ```
 
 ## Safety Boundaries
@@ -144,7 +159,7 @@ It does not:
 
 It does:
 
-- use official Kubernetes and Prometheus APIs
+- use official Kubernetes, Prometheus, ArgoCD, and Jenkins APIs
 - enforce namespace allowlists for namespace-scoped Kubernetes reads
 - bound log reads
 - return structured evidence envelopes
@@ -166,13 +181,13 @@ flowchart TD
 
 - `fake`: useful for demos and MCP tool discovery.
 - `fixture`: useful for tests, examples, and repeatable incident scenarios.
-- `api`: useful for a real kubeconfig, in-cluster service account, or Prometheus URL.
+- `api`: useful for a real kubeconfig, in-cluster service account, Prometheus URL, ArgoCD URL, or Jenkins URL.
 
 ## What To Build Next
 
-The strongest next phase is `v0.6.0 - Delivery Investigator`.
+The strongest next phase is `v0.6.x - Delivery Correlation`.
 
-Goal: connect Kubernetes symptoms to delivery systems, starting with ArgoCD and Jenkins.
+Goal: make ownership and timeline correlation stronger.
 
 The useful operator questions become:
 

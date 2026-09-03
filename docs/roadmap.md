@@ -58,15 +58,22 @@ Required capabilities:
 
 - Jenkins and ArgoCD read-only providers.
 - Correlate deployments, revisions, pipeline failures, and Kubernetes symptoms.
+- Delivery CLI, MCP tools, fixture providers, and deterministic diagnosis reports.
 
-## v0.6.x - Integration SDK Preview
+## v0.6.x
+
+- ArgoCD application resource details and sync history.
+- Jenkins stage-level build evidence.
+- Stronger ownership correlation between Kubernetes workloads and delivery systems.
+
+## v0.7.0 - Integration SDK Preview
 
 - Integration manifests.
 - Vendor-neutral capability vocabulary.
 - Contract-test suite.
 - Example community-style integration.
 
-## v0.7.0 - Orchestrated Investigation
+## v0.8.0 - Orchestrated Investigation
 
 - Supervisor and specialist-agent experiments.
 - Checkpoints, handoffs, retries, and bounded context.

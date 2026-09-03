@@ -6,6 +6,12 @@ import json
 from pathlib import Path
 from typing import Any, Sequence
 
+from platformops.mcp.delivery_server import (
+    build_delivery_integration,
+    diagnose_delivery_payload,
+    list_argocd_apps_payload,
+    list_jenkins_builds_payload,
+)
 from platformops.mcp.kubernetes_server import (
     diagnose_namespace_payload,
     get_endpoints_payload,
@@ -52,6 +58,12 @@ def build_parser() -> argparse.ArgumentParser:
     diagnose_k8s.add_argument("--tail-lines", type=int, default=80)
     _add_prometheus_args(diagnose_k8s)
     _add_policy_args(diagnose_k8s)
+    diagnose_delivery_parser = diagnose_areas.add_parser("delivery", help="Diagnose ArgoCD and Jenkins delivery health")
+    _add_delivery_args(diagnose_delivery_parser)
+    diagnose_delivery_parser.add_argument("--namespace", "-n", default=None)
+    diagnose_delivery_parser.add_argument("--app", dest="app_name", default=None)
+    diagnose_delivery_parser.add_argument("--job", dest="job_name", default=None)
+    diagnose_delivery_parser.add_argument("--build-limit", type=int, default=10)
     diagnose_service_parser = diagnose_areas.add_parser("service", help="Diagnose a Kubernetes service path")
     diagnose_service_parser.add_argument("name")
     _add_k8s_connection_args(diagnose_service_parser)
@@ -75,6 +87,19 @@ def build_parser() -> argparse.ArgumentParser:
     prom_query.add_argument("query")
     prometheus_commands.add_parser("targets", help="List Prometheus scrape targets")
     prometheus_commands.add_parser("alerts", help="List Prometheus alerts")
+
+    delivery = subcommands.add_parser("delivery", help="Read-only delivery investigation commands")
+    _add_delivery_args(delivery)
+    delivery_systems = delivery.add_subparsers(dest="system", required=True)
+    argocd = delivery_systems.add_parser("argocd", help="Read-only ArgoCD commands")
+    argocd_commands = argocd.add_subparsers(dest="command", required=True)
+    argocd_apps = argocd_commands.add_parser("apps", help="List ArgoCD applications")
+    argocd_apps.add_argument("--namespace", "-n", default=None)
+    jenkins = delivery_systems.add_parser("jenkins", help="Read-only Jenkins commands")
+    jenkins_commands = jenkins.add_subparsers(dest="command", required=True)
+    jenkins_builds = jenkins_commands.add_parser("builds", help="List Jenkins builds")
+    jenkins_builds.add_argument("--job", dest="job_name", default=None)
+    jenkins_builds.add_argument("--limit", type=int, default=10)
 
     k8s = subcommands.add_parser("k8s", help="Read-only Kubernetes investigation commands")
     _add_k8s_connection_args(k8s)
@@ -138,6 +163,11 @@ def _add_prometheus_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--prometheus-fixture", default=None)
 
 
+def _add_delivery_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--delivery-provider", choices=("fake", "fixture", "api"), default=None)
+    parser.add_argument("--delivery-fixture", default=None)
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -185,9 +215,9 @@ async def _run(args: argparse.Namespace) -> dict[str, Any]:
         raise ValueError(f"unsupported scan area: {args.scan_area}")
 
     if args.area == "diagnose":
-        integration = _build_kubernetes_integration(args)
-        prometheus = _build_prometheus_integration(args)
         if args.diagnose_area == "k8s":
+            integration = _build_kubernetes_integration(args)
+            prometheus = _build_prometheus_integration(args)
             return {
                 "diagnosis": await diagnose_namespace_payload(
                     namespace=args.namespace,
@@ -197,6 +227,8 @@ async def _run(args: argparse.Namespace) -> dict[str, Any]:
                 )
             }
         if args.diagnose_area == "service":
+            integration = _build_kubernetes_integration(args)
+            prometheus = _build_prometheus_integration(args)
             report = await diagnose_service(
                 name=args.name,
                 namespace=args.namespace,
@@ -205,7 +237,31 @@ async def _run(args: argparse.Namespace) -> dict[str, Any]:
                 prometheus=prometheus,
             )
             return {"diagnosis": report.to_dict(), "markdown": report.to_markdown()}
+        if args.diagnose_area == "delivery":
+            delivery = _build_delivery_integration(args)
+            return await diagnose_delivery_payload(
+                namespace=args.namespace,
+                app_name=args.app_name,
+                job_name=args.job_name,
+                build_limit=args.build_limit,
+                integration=delivery,
+            )
         raise ValueError(f"unsupported diagnosis area: {args.diagnose_area}")
+
+    if args.area == "delivery":
+        integration = _build_delivery_integration(args)
+        if args.system == "argocd" and args.command == "apps":
+            return await list_argocd_apps_payload(
+                namespace=args.namespace,
+                integration=integration,
+            )
+        if args.system == "jenkins" and args.command == "builds":
+            return await list_jenkins_builds_payload(
+                job_name=args.job_name,
+                limit=args.limit,
+                integration=integration,
+            )
+        raise ValueError(f"unsupported delivery command: {args.system} {args.command}")
 
     if args.area == "prometheus":
         integration = _build_prometheus_integration(args)
@@ -297,6 +353,13 @@ def _build_prometheus_integration(args: argparse.Namespace):
     )
 
 
+def _build_delivery_integration(args: argparse.Namespace):
+    return build_delivery_integration(
+        provider_name=args.delivery_provider,
+        fixture=args.delivery_fixture,
+    )
+
+
 def _print_payload(payload: dict[str, Any], output: str) -> None:
     if output == "markdown" and "markdown" in payload:
         print(payload["markdown"], end="")
@@ -360,6 +423,38 @@ def _print_payload(payload: dict[str, Any], output: str) -> None:
                     alert["summary"] or "",
                 )
                 for alert in payload_body["alerts"]
+            ],
+        )
+        return
+
+    if "argocd_apps" in payload_body:
+        _print_table(
+            ("namespace", "name", "sync", "health", "revision"),
+            [
+                (
+                    app["namespace"] or "",
+                    app["name"],
+                    app["sync_status"],
+                    app["health_status"],
+                    app["revision"] or "",
+                )
+                for app in payload_body["argocd_apps"]
+            ],
+        )
+        return
+
+    if "jenkins_builds" in payload_body:
+        _print_table(
+            ("job", "number", "result", "building", "timestamp"),
+            [
+                (
+                    build["job_name"],
+                    str(build["number"]),
+                    build["result"] or "",
+                    str(build["building"]),
+                    build["timestamp"] or "",
+                )
+                for build in payload_body["jenkins_builds"]
             ],
         )
         return

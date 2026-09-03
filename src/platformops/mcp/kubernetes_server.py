@@ -34,6 +34,12 @@ from platformops.mcp.prometheus_server import (
     prometheus_query_payload,
     prometheus_targets_payload,
 )
+from platformops.mcp.delivery_server import (
+    build_delivery_integration,
+    diagnose_delivery_payload,
+    list_argocd_apps_payload,
+    list_jenkins_builds_payload,
+)
 
 
 def _allowed_namespaces() -> set[str]:
@@ -249,6 +255,7 @@ def create_server():
     mcp = FastMCP("platformops-kubernetes")
     integration = build_kubernetes_integration()
     prometheus = build_prometheus_integration()
+    delivery = build_delivery_integration()
 
     @mcp.tool()
     async def get_nodes() -> dict:
@@ -361,6 +368,36 @@ def create_server():
             tail_lines=tail_lines,
             integration=integration,
             prometheus=prometheus,
+        )
+
+    @mcp.tool()
+    async def list_argocd_apps(namespace: str | None = None) -> dict:
+        """Return read-only ArgoCD application evidence."""
+        return await list_argocd_apps_payload(namespace=namespace, integration=delivery)
+
+    @mcp.tool()
+    async def list_jenkins_builds(job_name: str | None = None, limit: int = 10) -> dict:
+        """Return read-only Jenkins build evidence."""
+        return await list_jenkins_builds_payload(
+            job_name=job_name,
+            limit=limit,
+            integration=delivery,
+        )
+
+    @mcp.tool()
+    async def diagnose_delivery(
+        namespace: str | None = None,
+        app_name: str | None = None,
+        job_name: str | None = None,
+        build_limit: int = 10,
+    ) -> dict:
+        """Return a deterministic ArgoCD/Jenkins delivery diagnosis report."""
+        return await diagnose_delivery_payload(
+            namespace=namespace,
+            app_name=app_name,
+            job_name=job_name,
+            build_limit=build_limit,
+            integration=delivery,
         )
 
     @mcp.tool()

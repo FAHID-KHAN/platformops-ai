@@ -215,3 +215,50 @@ def test_cli_cluster_scan_requires_allowed_namespaces(capsys):
     assert exit_code == 0
     assert "Cluster status: unknown" in output
     assert "requires --allowed-namespaces" in output
+
+
+def test_cli_lists_argocd_apps(capsys):
+    exit_code = main(
+        [
+            "delivery",
+            "--delivery-provider",
+            "fixture",
+            "--delivery-fixture",
+            "tests/scenarios/delivery_unhealthy.json",
+            "argocd",
+            "apps",
+            "--namespace",
+            "jenkins",
+        ]
+    )
+
+    output = capsys.readouterr().out
+
+    assert exit_code == 0
+    assert "jenkins" in output
+    assert "OutOfSync" in output
+    assert "Degraded" in output
+
+
+def test_cli_diagnoses_delivery(capsys):
+    exit_code = main(
+        [
+            "diagnose",
+            "delivery",
+            "--delivery-provider",
+            "fixture",
+            "--delivery-fixture",
+            "tests/scenarios/delivery_unhealthy.json",
+            "--namespace",
+            "jenkins",
+            "--job",
+            "platform/jenkins",
+        ]
+    )
+
+    output = capsys.readouterr().out
+
+    assert exit_code == 0
+    assert "Status: critical" in output
+    assert "ArgoCD app jenkins is Degraded" in output
+    assert "ended with FAILURE" in output

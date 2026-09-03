@@ -1,3 +1,8 @@
+from platformops.mcp.delivery_server import (
+    diagnose_delivery_payload,
+    list_argocd_apps_payload,
+    list_jenkins_builds_payload,
+)
 from platformops.mcp.kubernetes_server import (
     diagnose_namespace_payload,
     diagnose_service_payload,
@@ -9,6 +14,7 @@ from platformops.mcp.kubernetes_server import (
 )
 from platformops.mcp.prometheus_server import prometheus_alerts_payload, prometheus_targets_payload
 from platformops.policies import KubernetesReadOnlyPolicy
+from platformops.providers.delivery import DeliveryIntegration, FakeDeliveryProvider
 from platformops.providers.kubernetes import FakeKubernetesProvider, KubernetesIntegration
 
 
@@ -83,3 +89,19 @@ async def test_mcp_cluster_scan_payload_helper_returns_ranked_report():
     assert report["status"] == "healthy"
     assert report["namespaces"]
     assert "markdown" in payload
+
+
+async def test_mcp_delivery_payload_helpers_return_evidence():
+    integration = DeliveryIntegration(FakeDeliveryProvider())
+
+    apps = await list_argocd_apps_payload(namespace="jenkins", integration=integration)
+    builds = await list_jenkins_builds_payload(job_name="platform/jenkins", integration=integration)
+    diagnosis = await diagnose_delivery_payload(
+        namespace="jenkins",
+        job_name="platform/jenkins",
+        integration=integration,
+    )
+
+    assert apps["payload"]["argocd_apps"][0]["name"] == "jenkins"
+    assert builds["payload"]["jenkins_builds"][0]["result"] == "FAILURE"
+    assert diagnosis["diagnosis"]["status"] == "critical"
