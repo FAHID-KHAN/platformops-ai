@@ -1,0 +1,21 @@
+{
+  "nodes": [
+    {
+      "name": "fixture-control-plane",
+      "ready": true,
+      "roles": ["control-plane"],
+      "kubernetes_version": "v1.30.0"
+    }
+  ],
+  "namespaces": [
+    {
+      "name": "platformops-demo",
+      "status": "Active"
+    }
+  ],
+  "pods": [],
+  "pod_details": [],
+  "events": [],
+  "logs": {}
+}
+

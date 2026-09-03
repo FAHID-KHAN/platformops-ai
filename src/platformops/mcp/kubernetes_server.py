@@ -5,7 +5,9 @@ import os
 from pathlib import Path
 
 from platformops.domain import InvocationContext
+from platformops.diagnostics.kubernetes import diagnose_kubernetes_namespace
 from platformops.integrations.capabilities import (
+    K8S_DIAGNOSE_NAMESPACE,
     K8S_GET_NODES,
     K8S_GET_POD,
     K8S_GET_POD_LOGS,
@@ -126,6 +128,20 @@ async def investigate_namespace_payload(
     return envelope.to_dict()
 
 
+async def diagnose_namespace_payload(
+    namespace: str,
+    tail_lines: int = 80,
+    integration: KubernetesIntegration | None = None,
+) -> dict:
+    integration = integration or build_kubernetes_integration()
+    report = await diagnose_kubernetes_namespace(
+        namespace=namespace,
+        tail_lines=tail_lines,
+        integration=integration,
+    )
+    return report.to_dict()
+
+
 def create_server():
     try:
         from mcp.server.fastmcp import FastMCP
@@ -187,6 +203,15 @@ def create_server():
     async def investigate_namespace(namespace: str, tail_lines: int = 50) -> dict:
         """Collect pod, event, and bounded log evidence for a namespace."""
         return await investigate_namespace_payload(
+            namespace=namespace,
+            tail_lines=tail_lines,
+            integration=integration,
+        )
+
+    @mcp.tool()
+    async def diagnose_namespace(namespace: str, tail_lines: int = 80) -> dict:
+        """Return a deterministic Kubernetes diagnosis report for a namespace."""
+        return await diagnose_namespace_payload(
             namespace=namespace,
             tail_lines=tail_lines,
             integration=integration,

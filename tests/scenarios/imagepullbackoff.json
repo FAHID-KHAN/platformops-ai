@@ -1,0 +1,65 @@
+{
+  "nodes": [
+    {
+      "name": "fixture-control-plane",
+      "ready": true,
+      "roles": ["control-plane"],
+      "kubernetes_version": "v1.30.0"
+    }
+  ],
+  "namespaces": [
+    {
+      "name": "platformops-demo",
+      "status": "Active"
+    }
+  ],
+  "pods": [
+    {
+      "name": "checkout-api-image-error",
+      "namespace": "platformops-demo",
+      "phase": "Pending",
+      "ready": "0/1",
+      "restarts": 0,
+      "node_name": "fixture-control-plane"
+    }
+  ],
+  "pod_details": [
+    {
+      "name": "checkout-api-image-error",
+      "namespace": "platformops-demo",
+      "phase": "Pending",
+      "ready": "0/1",
+      "restarts": 0,
+      "node_name": "fixture-control-plane",
+      "service_account": "default",
+      "containers": [
+        {
+          "name": "checkout-api",
+          "ready": false,
+          "restart_count": 0,
+          "state": "waiting",
+          "reason": "ImagePullBackOff"
+        }
+      ],
+      "conditions": {
+        "Ready": "False",
+        "PodScheduled": "True"
+      }
+    }
+  ],
+  "events": [
+    {
+      "namespace": "platformops-demo",
+      "involved_object_name": "checkout-api-image-error",
+      "involved_object_kind": "Pod",
+      "type": "Warning",
+      "reason": "ImagePullBackOff",
+      "message": "Back-off pulling image registry.example.invalid/checkout-api:latest",
+      "count": 3,
+      "first_timestamp": null,
+      "last_timestamp": null
+    }
+  ],
+  "logs": {}
+}
+

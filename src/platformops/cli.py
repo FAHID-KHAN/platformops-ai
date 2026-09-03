@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Sequence
 
 from platformops.mcp.kubernetes_server import (
+    diagnose_namespace_payload,
     get_pod_logs_payload,
     get_pod_payload,
     get_nodes_payload,
@@ -32,12 +33,17 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--output", choices=("table", "json"), default="table")
 
     subcommands = parser.add_subparsers(dest="area", required=True)
+    diagnose = subcommands.add_parser("diagnose", help="Produce deterministic diagnosis reports")
+    diagnose_areas = diagnose.add_subparsers(dest="diagnose_area", required=True)
+    diagnose_k8s = diagnose_areas.add_parser("k8s", help="Diagnose Kubernetes namespace health")
+    _add_k8s_connection_args(diagnose_k8s)
+    diagnose_k8s.add_argument("--namespace", "-n", required=True)
+    diagnose_k8s.add_argument("--tail-lines", type=int, default=80)
+    _add_policy_args(diagnose_k8s)
+
     k8s = subcommands.add_parser("k8s", help="Read-only Kubernetes investigation commands")
-    k8s.add_argument("--provider", choices=("fake", "fixture", "api"), default="api")
+    _add_k8s_connection_args(k8s)
     k8s.add_argument("--allowed-namespaces", default="")
-    k8s.add_argument("--context", default=None)
-    k8s.add_argument("--in-cluster", action="store_true")
-    k8s.add_argument("--fixture", default="tests/scenarios/healthy_cluster.json")
 
     k8s_commands = k8s.add_subparsers(dest="command", required=True)
     nodes = k8s_commands.add_parser("nodes", help="List Kubernetes nodes")
@@ -73,6 +79,13 @@ def _add_policy_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--allowed-namespaces", default=argparse.SUPPRESS)
 
 
+def _add_k8s_connection_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--provider", choices=("fake", "fixture", "api"), default="api")
+    parser.add_argument("--context", default=None)
+    parser.add_argument("--in-cluster", action="store_true")
+    parser.add_argument("--fixture", default="tests/scenarios/healthy_cluster.json")
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -82,6 +95,18 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 
 async def _run(args: argparse.Namespace) -> dict[str, Any]:
+    if args.area == "diagnose":
+        if args.diagnose_area != "k8s":
+            raise ValueError(f"unsupported diagnosis area: {args.diagnose_area}")
+        integration = _build_kubernetes_integration(args)
+        return {
+            "diagnosis": await diagnose_namespace_payload(
+                namespace=args.namespace,
+                tail_lines=args.tail_lines,
+                integration=integration,
+            )
+        }
+
     if args.area != "k8s":
         raise ValueError(f"unsupported command area: {args.area}")
 
@@ -146,6 +171,14 @@ def _print_payload(payload: dict[str, Any], output: str) -> None:
         return
 
     payload_body = payload.get("payload", {})
+    if "diagnosis" in payload:
+        _print_diagnosis(payload["diagnosis"])
+        return
+
+    if "diagnosis" in payload_body:
+        _print_diagnosis(payload_body["diagnosis"])
+        return
+
     if "unhealthy_pods" in payload_body:
         print(payload_body["summary"])
         pods = payload_body["unhealthy_pods"] or payload_body.get("attention_pods", []) or payload_body["pods"]
@@ -290,6 +323,24 @@ def _print_table(headers: tuple[str, ...], rows: list[tuple[str, ...]]) -> None:
     print(separator)
     for row in rows:
         print("  ".join(cell.ljust(widths[index]) for index, cell in enumerate(row)))
+
+
+def _print_diagnosis(report: dict[str, Any]) -> None:
+    print(f"Status: {report['status']}")
+    print(report["summary"])
+    if report["findings"]:
+        print("\nFindings")
+        for finding in report["findings"]:
+            print(f"- [{finding['severity']}] {finding['title']}")
+            print(f"  {finding['summary']}")
+    if report["recommendations"]:
+        print("\nRecommended next actions")
+        for recommendation in report["recommendations"]:
+            print(f"- {recommendation['action']}")
+    if report["limitations"]:
+        print("\nLimitations")
+        for limitation in report["limitations"]:
+            print(f"- {limitation}")
 
 
 if __name__ == "__main__":

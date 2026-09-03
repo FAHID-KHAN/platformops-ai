@@ -1,5 +1,6 @@
 from platformops.integrations.capabilities import (
     K8S_GET_NODES,
+    K8S_DIAGNOSE_NAMESPACE,
     K8S_GET_POD,
     K8S_GET_POD_LOGS,
     K8S_INVESTIGATE_NAMESPACE,
@@ -11,6 +12,7 @@ from platformops.integrations.registry import IntegrationRegistry, PlatformInteg
 
 __all__ = [
     "IntegrationRegistry",
+    "K8S_DIAGNOSE_NAMESPACE",
     "K8S_GET_NODES",
     "K8S_GET_POD",
     "K8S_GET_POD_LOGS",

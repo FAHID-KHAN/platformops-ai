@@ -10,6 +10,7 @@ from platformops.domain import (
 )
 from platformops.integrations.capabilities import (
     K8S_GET_NODES,
+    K8S_DIAGNOSE_NAMESPACE,
     K8S_GET_POD,
     K8S_GET_POD_LOGS,
     K8S_INVESTIGATE_NAMESPACE,
@@ -43,6 +44,7 @@ class KubernetesIntegration:
                 K8S_LIST_EVENTS,
                 K8S_GET_POD_LOGS,
                 K8S_INVESTIGATE_NAMESPACE,
+                K8S_DIAGNOSE_NAMESPACE,
             ),
             risk_level=RiskLevel.READ_ONLY,
             evidence_types=(
@@ -161,6 +163,25 @@ class KubernetesIntegration:
                 tail_lines = min(max(int(arguments.get("tail_lines", 50)), 1), 200)
                 self.policy.ensure_namespace_allowed(namespace)
                 return await self._investigate_namespace(namespace=namespace, tail_lines=tail_lines)
+
+            if capability == K8S_DIAGNOSE_NAMESPACE:
+                namespace = arguments["namespace"]
+                tail_lines = min(max(int(arguments.get("tail_lines", 80)), 1), 200)
+                self.policy.ensure_namespace_allowed(namespace)
+                from platformops.diagnostics.kubernetes import diagnose_kubernetes_namespace
+
+                report = await diagnose_kubernetes_namespace(
+                    namespace=namespace,
+                    tail_lines=tail_lines,
+                    integration=self,
+                )
+                return EvidenceEnvelope(
+                    source="kubernetes",
+                    capability=capability,
+                    evidence_type="kubernetes-diagnosis",
+                    payload={"diagnosis": report.to_dict()},
+                    scope={"namespace": namespace, "tail_lines": tail_lines},
+                )
 
             return self._error(capability, "unsupported_capability", f"unsupported capability: {capability}")
         except PolicyViolation as exc:

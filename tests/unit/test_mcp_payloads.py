@@ -1,4 +1,8 @@
-from platformops.mcp.kubernetes_server import get_nodes_payload, list_pods_payload
+from platformops.mcp.kubernetes_server import (
+    diagnose_namespace_payload,
+    get_nodes_payload,
+    list_pods_payload,
+)
 from platformops.policies import KubernetesReadOnlyPolicy
 from platformops.providers.kubernetes import FakeKubernetesProvider, KubernetesIntegration
 
@@ -22,3 +26,11 @@ async def test_mcp_payload_helper_accepts_namespace():
 
     assert payload["payload"]["pods"][0]["namespace"] == "platformops-demo"
 
+
+async def test_mcp_diagnose_payload_helper_returns_report():
+    integration = KubernetesIntegration(FakeKubernetesProvider())
+
+    payload = await diagnose_namespace_payload(namespace="platformops-demo", integration=integration)
+
+    assert payload["status"] == "healthy"
+    assert payload["findings"]

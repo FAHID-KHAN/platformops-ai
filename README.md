@@ -17,6 +17,7 @@ Then run:
 ```bash
 platformops k8s nodes
 platformops k8s investigate --namespace jenkins --allowed-namespaces jenkins
+platformops diagnose k8s --namespace jenkins --allowed-namespaces jenkins
 ```
 
 ## Local Development
@@ -59,6 +60,17 @@ platformops k8s investigate \
 
 This collects pod status, namespace events, and bounded log excerpts for unhealthy pods.
 
+Generate a deterministic diagnosis report:
+
+```bash
+platformops diagnose k8s \
+  --namespace jenkins \
+  --allowed-namespaces jenkins \
+  --tail-lines 80
+```
+
+The diagnosis report summarizes status, findings, evidence, recommended next actions, and current limitations without using an LLM.
+
 For real Kubernetes API access, configure kubeconfig or in-cluster credentials:
 
 ```bash
@@ -76,6 +88,7 @@ platformops-mcp-k8s
 - `list_events(namespace, pod_name=None)`
 - `get_pod_logs(namespace, name, container=None, tail_lines=100)`
 - `investigate_namespace(namespace, tail_lines=50)`
+- `diagnose_namespace(namespace, tail_lines=80)`
 
 All tools return structured evidence envelopes. The MCP server does not require an LLM API key.
 

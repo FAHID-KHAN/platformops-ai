@@ -26,26 +26,33 @@ Required capabilities:
 - Redaction rules.
 - Reproducible failure scenarios.
 
-## v0.2.0 - Observability Investigator
+## v0.2.0 - Kubernetes Diagnosis
+
+- Deterministic diagnosis reports.
+- Kubernetes findings, severity, evidence references, and recommendations.
+- Rules for common pod failure modes.
+- CLI and MCP diagnosis entrypoints.
+
+## v0.3.0 - Observability Investigator
 
 - Prometheus provider.
 - Metrics and alerts capabilities.
 - Kubernetes and metrics correlation.
 - PlatformOps self-metrics.
 
-## v0.3.0 - Delivery Investigator
+## v0.4.0 - Delivery Investigator
 
 - Jenkins and ArgoCD read-only providers.
 - Correlate deployments, revisions, pipeline failures, and Kubernetes symptoms.
 
-## v0.3.x - Integration SDK Preview
+## v0.4.x - Integration SDK Preview
 
 - Integration manifests.
 - Vendor-neutral capability vocabulary.
 - Contract-test suite.
 - Example community-style integration.
 
-## v0.4.0 - Orchestrated Investigation
+## v0.5.0 - Orchestrated Investigation
 
 - Supervisor and specialist-agent experiments.
 - Checkpoints, handoffs, retries, and bounded context.

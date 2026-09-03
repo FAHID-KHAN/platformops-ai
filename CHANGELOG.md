@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.0
+
+- Added deterministic Kubernetes diagnosis reports.
+- Added `platformops diagnose k8s --namespace ...`.
+- Added MCP diagnosis support through `diagnose_namespace`.
+- Added diagnosis models for findings, severity, evidence references, and recommendations.
+- Added rules for CrashLoopBackOff, ImagePullBackOff, pending/unschedulable pods, readiness failures, restarted-but-ready pods, and empty namespaces.
+- Added scenario fixtures and tests for common Kubernetes failure modes.
+
 ## 0.1.4
 
 - Cleaned up remaining install messages to use `pip install platformops-ai`.

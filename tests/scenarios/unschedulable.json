@@ -1,0 +1,65 @@
+{
+  "nodes": [
+    {
+      "name": "fixture-control-plane",
+      "ready": true,
+      "roles": ["control-plane"],
+      "kubernetes_version": "v1.30.0"
+    }
+  ],
+  "namespaces": [
+    {
+      "name": "platformops-demo",
+      "status": "Active"
+    }
+  ],
+  "pods": [
+    {
+      "name": "large-worker",
+      "namespace": "platformops-demo",
+      "phase": "Pending",
+      "ready": "0/1",
+      "restarts": 0,
+      "node_name": null
+    }
+  ],
+  "pod_details": [
+    {
+      "name": "large-worker",
+      "namespace": "platformops-demo",
+      "phase": "Pending",
+      "ready": "0/1",
+      "restarts": 0,
+      "node_name": null,
+      "service_account": "default",
+      "containers": [
+        {
+          "name": "worker",
+          "ready": false,
+          "restart_count": 0,
+          "state": "waiting",
+          "reason": "Pending"
+        }
+      ],
+      "conditions": {
+        "Ready": "False",
+        "PodScheduled": "False"
+      }
+    }
+  ],
+  "events": [
+    {
+      "namespace": "platformops-demo",
+      "involved_object_name": "large-worker",
+      "involved_object_kind": "Pod",
+      "type": "Warning",
+      "reason": "FailedScheduling",
+      "message": "0/1 nodes are available: Insufficient cpu.",
+      "count": 5,
+      "first_timestamp": null,
+      "last_timestamp": null
+    }
+  ],
+  "logs": {}
+}
+
