@@ -6,6 +6,8 @@ PlatformOps AI helps operators investigate Kubernetes workloads without giving a
 
 The current release focuses on Kubernetes. The architecture is designed to grow into observability, CI/CD, GitOps, source control, and approval-gated remediation.
 
+Jenkins appears in examples because it is a familiar platform workload, but PlatformOps AI is not Jenkins-specific. It can inspect any Kubernetes namespace or service that your kubeconfig can read and that you include in the namespace allowlist.
+
 ## Install
 
 ```bash
@@ -48,6 +50,14 @@ Diagnose a service path:
 
 ```bash
 platformops diagnose service jenkins --namespace jenkins --allowed-namespaces jenkins
+```
+
+Use the same commands for any namespace or service:
+
+```bash
+platformops diagnose k8s --namespace argocd --allowed-namespaces argocd
+platformops diagnose k8s --namespace monitoring --allowed-namespaces monitoring
+platformops diagnose service argocd-server --namespace argocd --allowed-namespaces argocd
 ```
 
 Correlate Kubernetes diagnosis with Prometheus:
@@ -156,6 +166,36 @@ Safety option:
 ```
 
 When set, PlatformOps only returns namespace-scoped evidence from the allowed namespaces.
+
+## Verify Your Cluster
+
+Start by listing namespaces:
+
+```bash
+platformops k8s namespaces
+```
+
+Then inspect the namespaces that matter in your environment:
+
+```bash
+platformops diagnose k8s --namespace argocd --allowed-namespaces argocd
+platformops diagnose k8s --namespace jenkins --allowed-namespaces jenkins
+platformops diagnose k8s --namespace monitoring --allowed-namespaces monitoring
+```
+
+For service-path checks, list services first:
+
+```bash
+platformops k8s services --namespace argocd --allowed-namespaces argocd
+```
+
+Then diagnose a specific service:
+
+```bash
+platformops diagnose service argocd-server --namespace argocd --allowed-namespaces argocd
+```
+
+Current scope: commands diagnose one namespace or one service at a time. A future cluster scan command will inspect multiple namespaces and rank findings across the cluster.
 
 ## MCP Server
 
